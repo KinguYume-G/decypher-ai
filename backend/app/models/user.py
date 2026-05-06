@@ -4,6 +4,7 @@ from sqlalchemy import Boolean, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+from sqlalchemy.orm import relationship
 
 
 class User(Base):
@@ -17,3 +18,5 @@ class User(Base):
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
