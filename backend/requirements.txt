@@ -8,13 +8,14 @@ asyncpg==0.30.0
 alembic==1.14.0
 
 # config & validation
-pydantic==2.10.6
+pydantic[email]==2.10.6
 pydantic-settings==2.7.0
 python-dotenv==1.0.1
 
 # auth
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
 
 # http client (data collection)
 httpx==0.28.1

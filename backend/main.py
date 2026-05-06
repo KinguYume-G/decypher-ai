@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1 import auth
+import app.models  # noqa: F401 — 注册所有 ORM 模型，让 init_db 能建表
 from app.config import settings
 from app.database import init_db
 
@@ -28,6 +30,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(auth.router, prefix="/api/v1")
 
 
 @app.get("/health")
