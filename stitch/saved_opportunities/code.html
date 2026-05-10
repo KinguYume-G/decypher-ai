@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Outfit:wght@500;600;700;900&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#e8dfee",
+                        "on-tertiary-fixed-variant": "#713700",
+                        "error": "#ffb4ab",
+                        "surface-container-low": "#1d1a24",
+                        "on-secondary-fixed": "#001a42",
+                        "surface-tint": "#d2bbff",
+                        "on-tertiary": "#4f2500",
+                        "inverse-primary": "#732ee4",
+                        "on-tertiary-fixed": "#301400",
+                        "on-tertiary-container": "#ffe0cd",
+                        "on-secondary-container": "#e6ecff",
+                        "primary": "#d2bbff",
+                        "on-primary-fixed": "#25005a",
+                        "inverse-surface": "#e8dfee",
+                        "surface-bright": "#3c3742",
+                        "primary-fixed-dim": "#d2bbff",
+                        "on-primary-container": "#ede0ff",
+                        "surface-variant": "#37333e",
+                        "primary-container": "#7c3aed",
+                        "on-error": "#690005",
+                        "surface": "#15121b",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "tertiary-fixed": "#ffdcc6",
+                        "tertiary-container": "#a15100",
+                        "on-secondary-fixed-variant": "#004395",
+                        "background": "#15121b",
+                        "outline-variant": "#4a4455",
+                        "on-primary-fixed-variant": "#5a00c6",
+                        "surface-container-high": "#2c2833",
+                        "surface-container-highest": "#37333e",
+                        "on-surface": "#e8dfee",
+                        "on-secondary": "#002e6a",
+                        "tertiary-fixed-dim": "#ffb784",
+                        "surface-container": "#221e28",
+                        "secondary-container": "#0566d9",
+                        "tertiary": "#ffb784",
+                        "surface-container-lowest": "#100d16",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#d8e2ff",
+                        "inverse-on-surface": "#332f39",
+                        "outline": "#958da1",
+                        "surface-dim": "#15121b",
+                        "on-error-container": "#ffdad6",
+                        "on-surface-variant": "#ccc3d8",
+                        "secondary": "#adc6ff",
+                        "primary-fixed": "#eaddff",
+                        "on-primary": "#3f008e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "container-max": "1280px",
+                        "unit": "8px",
+                        "margin-desktop": "48px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Outfit"],
+                        "headline-lg-mobile": ["Outfit"],
+                        "display-xl": ["Outfit"],
+                        "headline-lg": ["Outfit"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "display-xl": ["64px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(30, 30, 46, 0.6);
+            backdrop-filter: blur(24px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .ai-pulse-glow {
+            box-shadow: 0 0 15px rgba(210, 187, 255, 0.15);
+        }
+        .confidence-ring {
+            background: conic-gradient(from 0deg, #d2bbff 0%, #7c3aed 70%, transparent 70%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="bg-surface/60 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.1)] docked full-width top-0 sticky flex justify-between items-center w-full px-margin-desktop h-16 z-40">
+<div class="flex items-center gap-8">
+<h1 class="font-display-xl text-headline-md font-bold text-primary tracking-tight">Decypher AI</h1>
+<nav class="hidden md:flex gap-6">
+<a class="text-on-surface-variant font-medium hover:bg-white/5 transition-colors duration-200 px-3 py-1 rounded" href="#">Dashboard</a>
+<a class="text-on-surface-variant font-medium hover:bg-white/5 transition-colors duration-200 px-3 py-1 rounded" href="#">Task Manager</a>
+<a class="text-primary font-bold border-b-2 border-primary px-3 py-1" href="#">Saved Opportunities</a>
+<a class="text-on-surface-variant font-medium hover:bg-white/5 transition-colors duration-200 px-3 py-1 rounded" href="#">Settings</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-white/5 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-white/5 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-sm">
+                JD
+            </div>
+</div>
+</header>
+<div class="flex">
+<!-- Sidebar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col p-4 space-y-6 z-50 bg-surface-container-lowest/80 backdrop-blur-2xl border-r border-white/10 shadow-2xl shadow-primary/5 docked left-0 w-64 hidden lg:flex">
+<div class="pt-20 pb-4">
+<div class="flex flex-col gap-1 px-4 mb-8">
+<span class="font-display-xl text-headline-md font-black bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Decypher AI</span>
+<span class="font-body-md text-label-sm text-on-surface-variant tracking-widest opacity-60">INTELLIGENT ENGINE</span>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+<span class="font-body-md">Task Manager</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+<span class="font-body-md font-bold">Saved Opportunities</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md">Settings</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto space-y-1 border-t border-white/5 pt-4">
+<button class="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-primary-container to-secondary-container text-white font-bold shadow-lg shadow-primary/20 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span>New Discovery</span>
+</button>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="text-body-md">Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="text-body-md">Documentation</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 lg:ml-64 p-margin-mobile md:p-margin-desktop min-h-screen">
+<div class="max-w-container-max mx-auto space-y-gutter">
+<!-- Header & Stats -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">Saved Opportunities</h2>
+<p class="text-on-surface-variant font-body-md max-w-xl">Centralized intelligence dossier of high-confidence signals extracted from the deep engine. Review, prioritize, and execute deeper analysis.</p>
+</div>
+<div class="flex gap-4">
+<div class="glass-panel rounded-xl px-6 py-4 flex flex-col items-center">
+<span class="font-label-sm text-primary mb-1">TOTAL NODES</span>
+<span class="font-headline-md text-on-surface">142</span>
+</div>
+<div class="glass-panel rounded-xl px-6 py-4 flex flex-col items-center">
+<span class="font-label-sm text-tertiary mb-1">HIGH PRIORITY</span>
+<span class="font-headline-md text-on-surface">28</span>
+</div>
+</div>
+</div>
+<!-- Controls Bar -->
+<div class="flex flex-wrap items-center justify-between gap-4 glass-panel p-4 rounded-xl">
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-4 py-2 rounded-full bg-primary/20 text-primary border border-primary/30 font-label-sm">ALL SIGNALS</button>
+<button class="px-4 py-2 rounded-full bg-white/5 text-on-surface-variant hover:bg-white/10 transition-colors font-label-sm">CRITICAL ONLY</button>
+<button class="px-4 py-2 rounded-full bg-white/5 text-on-surface-variant hover:bg-white/10 transition-colors font-label-sm">TECH STACK</button>
+<button class="px-4 py-2 rounded-full bg-white/5 text-on-surface-variant hover:bg-white/10 transition-colors font-label-sm">ARBITRAGE</button>
+<div class="w-px h-6 bg-white/10 mx-2"></div>
+<button class="flex items-center gap-2 px-3 py-1 rounded hover:bg-white/5 text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="filter_list">filter_list</span>
+<span class="font-label-sm">FILTERS</span>
+</button>
+</div>
+<div class="flex items-center gap-4 bg-background border border-white/10 rounded-lg px-4 py-2 w-full md:w-auto">
+<span class="material-symbols-outlined text-outline" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline w-full md:w-64 font-body-md" placeholder="Search dossier..." type="text"/>
+</div>
+</div>
+<!-- Opportunity Dossier Table/List -->
+<div class="glass-panel rounded-xl overflow-hidden shadow-2xl shadow-black/40">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-white/5 border-b border-white/10">
+<th class="px-6 py-4 font-label-sm text-outline tracking-widest uppercase">Opportunity Node</th>
+<th class="px-6 py-4 font-label-sm text-outline tracking-widest uppercase">Confidence</th>
+<th class="px-6 py-4 font-label-sm text-outline tracking-widest uppercase">Categories</th>
+<th class="px-6 py-4 font-label-sm text-outline tracking-widest uppercase">Detected</th>
+<th class="px-6 py-4 font-label-sm text-outline tracking-widest uppercase text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<!-- Entry 1 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-6 py-6">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded bg-surface-container-high border border-white/10 flex items-center justify-center group-hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-primary" data-icon="hub">hub</span>
+</div>
+<div>
+<div class="font-headline-md text-[18px] text-on-surface mb-0.5">Quantum Ledger Optimization</div>
+<div class="text-on-surface-variant text-sm font-body-md">Ref. #QL-9428 • L2 Protocol Expansion</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="flex items-center gap-3">
+<div class="relative h-10 w-10 flex items-center justify-center">
+<svg class="h-full w-full rotate-[-90deg]">
+<circle cx="20" cy="20" fill="transparent" r="16" stroke="rgba(255,255,255,0.05)" stroke-width="3"></circle>
+<circle class="drop-shadow-[0_0_8px_rgba(210,187,255,0.6)]" cx="20" cy="20" fill="transparent" r="16" stroke="#d2bbff" stroke-dasharray="100" stroke-dashoffset="8" stroke-width="3"></circle>
+</svg>
+<span class="absolute text-[10px] font-bold font-label-sm">92%</span>
+</div>
+<span class="font-label-sm text-primary">CRITICAL</span>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-[10px] font-label-sm text-primary">BLOCKCHAIN</span>
+<span class="px-2 py-0.5 rounded bg-secondary/10 border border-secondary/20 text-[10px] font-label-sm text-secondary">FINTECH</span>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="text-on-surface font-body-md">2.4h ago</div>
+<div class="text-outline text-xs">Lat: 40.7128 | Lon: -74.0060</div>
+</td>
+<td class="px-6 py-6 text-right">
+<button class="inline-flex items-center gap-2 px-6 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface hover:bg-primary hover:text-on-primary transition-all duration-300 ai-pulse-glow group/btn">
+<span class="font-label-sm">DEEP DIVE</span>
+<span class="material-symbols-outlined text-[18px] group-hover/btn:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</td>
+</tr>
+<!-- Entry 2 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-6 py-6">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded bg-surface-container-high border border-white/10 flex items-center justify-center group-hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-tertiary" data-icon="biotech">biotech</span>
+</div>
+<div>
+<div class="font-headline-md text-[18px] text-on-surface mb-0.5">Synthetic Bio-Neural Interface</div>
+<div class="text-on-surface-variant text-sm font-body-md">Ref. #SB-1022 • MedTech Series A</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="flex items-center gap-3">
+<div class="relative h-10 w-10 flex items-center justify-center">
+<svg class="h-full w-full rotate-[-90deg]">
+<circle cx="20" cy="20" fill="transparent" r="16" stroke="rgba(255,255,255,0.05)" stroke-width="3"></circle>
+<circle class="drop-shadow-[0_0_8px_rgba(255,183,132,0.6)]" cx="20" cy="20" fill="transparent" r="16" stroke="#ffb784" stroke-dasharray="100" stroke-dashoffset="25" stroke-width="3"></circle>
+</svg>
+<span class="absolute text-[10px] font-bold font-label-sm">75%</span>
+</div>
+<span class="font-label-sm text-tertiary">STABLE</span>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded bg-tertiary/10 border border-tertiary/20 text-[10px] font-label-sm text-tertiary">BIOTECH</span>
+<span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-label-sm text-on-surface-variant">AI-DRIVEN</span>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="text-on-surface font-body-md">5.1h ago</div>
+<div class="text-outline text-xs">Remote Capture Node-7</div>
+</td>
+<td class="px-6 py-6 text-right">
+<button class="inline-flex items-center gap-2 px-6 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface hover:bg-primary hover:text-on-primary transition-all duration-300 ai-pulse-glow group/btn">
+<span class="font-label-sm">DEEP DIVE</span>
+<span class="material-symbols-outlined text-[18px] group-hover/btn:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</td>
+</tr>
+<!-- Entry 3 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-6 py-6">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded bg-surface-container-high border border-white/10 flex items-center justify-center group-hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-secondary" data-icon="bolt">bolt</span>
+</div>
+<div>
+<div class="font-headline-md text-[18px] text-on-surface mb-0.5">Fusion Grid Management</div>
+<div class="text-on-surface-variant text-sm font-body-md">Ref. #FG-4402 • Infrastructure Arbitrage</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="flex items-center gap-3">
+<div class="relative h-10 w-10 flex items-center justify-center">
+<svg class="h-full w-full rotate-[-90deg]">
+<circle cx="20" cy="20" fill="transparent" r="16" stroke="rgba(255,255,255,0.05)" stroke-width="3"></circle>
+<circle class="drop-shadow-[0_0_8px_rgba(173,198,255,0.6)]" cx="20" cy="20" fill="transparent" r="16" stroke="#adc6ff" stroke-dasharray="100" stroke-dashoffset="12" stroke-width="3"></circle>
+</svg>
+<span class="absolute text-[10px] font-bold font-label-sm">88%</span>
+</div>
+<span class="font-label-sm text-secondary">OPTIMAL</span>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded bg-secondary/10 border border-secondary/20 text-[10px] font-label-sm text-secondary">ENERGY</span>
+<span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-label-sm text-on-surface-variant">GOV-SEC</span>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="text-on-surface font-body-md">12.8h ago</div>
+<div class="text-outline text-xs">Sector Alpha-9 Cluster</div>
+</td>
+<td class="px-6 py-6 text-right">
+<button class="inline-flex items-center gap-2 px-6 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface hover:bg-primary hover:text-on-primary transition-all duration-300 ai-pulse-glow group/btn">
+<span class="font-label-sm">DEEP DIVE</span>
+<span class="material-symbols-outlined text-[18px] group-hover/btn:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</td>
+</tr>
+<!-- Entry 4 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-6 py-6">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded bg-surface-container-high border border-white/10 flex items-center justify-center group-hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-primary" data-icon="memory">memory</span>
+</div>
+<div>
+<div class="font-headline-md text-[18px] text-on-surface mb-0.5">Neuromorphic Compute Farm</div>
+<div class="text-on-surface-variant text-sm font-body-md">Ref. #NC-8119 • GPU Scarcity Play</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="flex items-center gap-3">
+<div class="relative h-10 w-10 flex items-center justify-center">
+<svg class="h-full w-full rotate-[-90deg]">
+<circle cx="20" cy="20" fill="transparent" r="16" stroke="rgba(255,255,255,0.05)" stroke-width="3"></circle>
+<circle class="drop-shadow-[0_0_8px_rgba(210,187,255,0.6)]" cx="20" cy="20" fill="transparent" r="16" stroke="#d2bbff" stroke-dasharray="100" stroke-dashoffset="40" stroke-width="3"></circle>
+</svg>
+<span class="absolute text-[10px] font-bold font-label-sm">60%</span>
+</div>
+<span class="font-label-sm text-outline">EMERGING</span>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-[10px] font-label-sm text-primary">HARDWARE</span>
+<span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-label-sm text-on-surface-variant">SUPPLY-CHAIN</span>
+</div>
+</td>
+<td class="px-6 py-6">
+<div class="text-on-surface font-body-md">1d ago</div>
+<div class="text-outline text-xs">Pacific RIM Telemetry</div>
+</td>
+<td class="px-6 py-6 text-right">
+<button class="inline-flex items-center gap-2 px-6 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface hover:bg-primary hover:text-on-primary transition-all duration-300 ai-pulse-glow group/btn">
+<span class="font-label-sm">DEEP DIVE</span>
+<span class="material-symbols-outlined text-[18px] group-hover/btn:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Dossier Footer -->
+<div class="bg-surface-container-low px-6 py-4 border-t border-white/10 flex items-center justify-between">
+<div class="text-outline font-label-sm">SHOWING 4 OF 142 ENTRIES</div>
+<div class="flex gap-2">
+<button class="p-2 glass-panel rounded hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-on-surface" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="p-2 glass-panel rounded bg-primary text-on-primary">
+<span class="font-label-sm px-2">1</span>
+</button>
+<button class="p-2 glass-panel rounded hover:bg-white/10 transition-colors">
+<span class="font-label-sm px-2">2</span>
+</button>
+<button class="p-2 glass-panel rounded hover:bg-white/10 transition-colors">
+<span class="font-label-sm px-2">3</span>
+</button>
+<button class="p-2 glass-panel rounded hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-on-surface" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Secondary Dossier Sections: Bento-Grid style details -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Global Hotspots -->
+<div class="glass-panel rounded-xl p-6 md:col-span-2">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline-md text-on-surface">Intelligence Hotspots</h3>
+<span class="material-symbols-outlined text-outline" data-icon="public">public</span>
+</div>
+<div class="aspect-video w-full rounded-lg bg-surface-container-highest relative overflow-hidden">
+<img class="w-full h-full object-cover opacity-50" data-alt="A sophisticated digital world map glowing with neon violet and electric blue data points indicating intelligence clusters. The map is displayed on a dark glass interface with microscopic grid lines and floating data callouts, creating a high-tech command center visualization. Soft ambient light illuminates the edges of the continents against a deep obsidian background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBAQ0EAbtueBo6qy2Km8JPlk4TglXWHLPx8kR9gwEBEeRXeRBC-w-rekcKRv8J6-ZAZj-eAhYOM3lSzRAKaWhp0kHIFdr0c1Bg4mB5BCZJrDq9g2Jt4yWBTZdFdKeR6kZhAzsyCOyXUA9oNmdh9ihFbrxW2CSUvpQlfigAebLc7faq_M5CAC8w_ftWU6Kq-q8XxZGe_N1fQg_R60Rq9kgA3aG1Dm5XwAV3b7Q8Xemq4gjq3aHtt_qQFf1mXu1D_6ut_OFbFsWSWwM"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+<!-- Map Overlay Markers -->
+<div class="absolute top-1/4 left-1/3 h-3 w-3 bg-primary rounded-full animate-ping"></div>
+<div class="absolute top-1/4 left-1/3 h-2 w-2 bg-primary rounded-full"></div>
+<div class="absolute bottom-1/3 right-1/4 h-3 w-3 bg-secondary rounded-full animate-ping"></div>
+<div class="absolute bottom-1/3 right-1/4 h-2 w-2 bg-secondary rounded-full"></div>
+</div>
+</div>
+<!-- Rapid Analysis Feed -->
+<div class="glass-panel rounded-xl p-6 flex flex-col">
+<h3 class="font-headline-md text-on-surface mb-6">Live Stream Analysis</h3>
+<div class="space-y-4 overflow-y-auto max-h-[300px] pr-2">
+<div class="p-3 rounded bg-white/5 border-l-2 border-primary">
+<div class="font-label-sm text-primary mb-1">SIGNAL ACQUIRED</div>
+<div class="text-sm font-body-md text-on-surface">Satellite array detected shift in energy consumption in Zurich sector.</div>
+<div class="text-[10px] text-outline mt-1 uppercase">T-minus 04:22</div>
+</div>
+<div class="p-3 rounded bg-white/5 border-l-2 border-secondary">
+<div class="font-label-sm text-secondary mb-1">CORRELATION SUCCESS</div>
+<div class="text-sm font-body-md text-on-surface">Matching QL-9428 with recent venture capital liquidity event.</div>
+<div class="text-[10px] text-outline mt-1 uppercase">T-minus 12:45</div>
+</div>
+<div class="p-3 rounded bg-white/5 border-l-2 border-outline">
+<div class="font-label-sm text-outline mb-1">NODE UPDATE</div>
+<div class="text-sm font-body-md text-on-surface">SB-1022 technical whitepaper has been decrypted and indexed.</div>
+<div class="text-[10px] text-outline mt-1 uppercase">T-minus 21:00</div>
+</div>
+</div>
+<button class="mt-auto w-full py-3 text-center text-label-sm text-primary hover:bg-primary/10 rounded transition-colors uppercase tracking-widest">Connect to live stream</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Mobile Navigation Bar -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-surface-container-lowest/90 backdrop-blur-xl border-t border-white/10 px-margin-mobile h-16 flex justify-between items-center z-50">
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-[10px] font-label-sm uppercase">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+<span class="text-[10px] font-label-sm uppercase">Tasks</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" data-icon="bookmark" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+<span class="text-[10px] font-label-sm uppercase">Saved</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-[10px] font-label-sm uppercase">Settings</span>
+</a>
+</nav>
+</body></html>

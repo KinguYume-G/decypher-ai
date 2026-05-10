@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -89,13 +89,14 @@ async def delete_task(
 @router.post("/{task_id}/run", response_model=APIResponse[dict])
 async def run_task(
     task_id: int,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    from app.workers.orchestrator import run_analysis_task  # avoid circular import at module level
+
     task = await _get_user_task(task_id, current_user.id, db)
-    task.status = TaskStatus.running
-    await db.commit()
-    # Phase 5 完成后在这里触发 orchestrator
+    background_tasks.add_task(run_analysis_task, task_id)
     return APIResponse(success=True, data={"message": f"任务 '{task.name}' 已触发执行，结果稍后可查看"})
 
 

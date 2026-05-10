@@ -115,3 +115,52 @@ class TaskOut(BaseModel):
     next_run_at: datetime | None
     run_count: int
     created_at: datetime
+
+
+# ── Opportunity Schemas ───────────────────────────────────
+
+
+class OpportunityOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    task_id: int
+    title: str
+    what_to_build: str
+    why_it_matters: str
+    how_to_execute: str
+    score_trend: float
+    score_novelty: float
+    score_competition: float
+    score_feasibility: float
+    score_commercial: float
+    score_total: float
+    keywords_matched: list
+    source_signals: list
+    created_at: datetime
+
+
+# -- Chat Schemas -------------------------------------------------
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    opportunity_id: int | None = None
+    conversation_history: list[ChatMessage] = []
+
+    @field_validator("message")
+    @classmethod
+    def message_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("消息不能为空")
+        return v.strip()
+
+
+class ChatResponse(BaseModel):
+    role: Literal["assistant"] = "assistant"
+    content: str

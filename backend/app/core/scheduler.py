@@ -48,5 +48,5 @@ def resume_task_job(task_id: int) -> None:
 
 
 async def _run_task_placeholder(task_id: int) -> None:
-    # Phase 5 的 orchestrator 完成后替换这里
-    pass
+    from app.workers.orchestrator import run_analysis_task  # deferred to avoid circular import
+    await run_analysis_task(task_id)

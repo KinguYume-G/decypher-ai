@@ -35,3 +35,4 @@ class Task(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     user = relationship("User", back_populates="tasks")
+    opportunities = relationship("Opportunity", back_populates="task", cascade="all, delete-orphan")
