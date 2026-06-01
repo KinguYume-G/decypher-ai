@@ -6,43 +6,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis)
 
----
-
-## 一、产品定位（我们在做什么）
-
-**Decypher AI** 是一款面向科技创业者和研究者的 **AI 智能情报决策平台**。它持续监测全网碎片化信号（GitHub、Hacker News、arXiv、Product Hunt、SEC EDGAR 等 15 个以上数据源），运用大语言模型对信号进行结构化分析和多维度评分，并在 Bento Grid 仪表板上展示可操作的机会卡片，右侧配备联动的 AI Analyst 智能助理。
-
-它不是新闻聚合器，也不是聊天机器人，而是一个**闭环情报引擎**：
-
-```
-公开数据源 → AI 采集清洗 → LLM 分析评分 → 信息卡片 Dashboard
-→ 用户点击反馈 → AI 深度解读 → 生成报告/笔记 → 系统记住用户偏好
-```
-
-### 核心价值主张
-
-| 传统工具 | Decypher AI |
-| - | - |
-| 手动看新闻、筛信息 | 自动抓取 + AI 归因 |
-| 分散工具（论文/新闻/财报各一套） | 五模块统一平台 |
-| 普通聊天 AI | 基于当前信号的上下文分析师 |
-| 静态仪表板 | 用户行为反馈的自适应推荐 |
-
----
-
-## 二、五大核心模块
-
-每个模块共用底层同一套数据管道，只是**信号来源和 Prompt 侧重不同**。
-
-| 模块 | 核心数据源 | AI 分析重点 |
-| - | - | - |
-| **商业市场** | Product Hunt、HN、公司 Blog、GitHub 热门项目 | 行业动态、产品发布、市场机会、竞品分析 |
-| **学术研究** | arXiv、OpenAlex、Crossref、GitHub | 论文总结、研究趋势、paper-to-project 建议 |
-| **创业机会** | GitHub Show HN、Product Hunt、DEV.to | 市场机会评分、MVP 建议、商业模式、竞品 |
-| **股市动态** | SEC EDGAR、公司 IR、GDELT 新闻 | 财报摘要、AI 业务信号、新闻情绪（仅研究，不写买卖建议） |
-| **求职热点** | Stack Exchange、GitHub Jobs、HN Hiring | 技能需求、岗位趋势、学习路线推荐 |
-
-**同一条数据可跨模块使用**：`LangGraph 热度上升` → 同时出现在商业市场、学术研究、创业机会和求职热点。
+AI 驱动的科技情报平台，持续从 15+ 数据源采集信号，通过 LLM 分析生成结构化机会卡片，右侧配备 SSE 流式 AI Analyst。→ [了解产品定位](docs/product.md)
 
 ---
 
@@ -85,21 +49,34 @@ graph TD
     D2 -->|用户追问| B7
 ```
 
-**数据流**：`采集 (Collector)` → `清洗去重 (Processor)` → `AI 分析打分 (Analysis Service)` → `存库 (PostgreSQL)` → `前端渲染`。用户点击卡片时，右侧 AI Analyst 自动装载该卡片上下文，支持流式追问。
-
 ---
 
-## 详细文档
+## 文档
+
+### 文档索引
 
 | 文档 | 内容 |
 |-|-|
-| [docs/architecture.md](docs/architecture.md) | 模块划分、文件职责、层间调用关系 |
-| [docs/api-design.md](docs/api-design.md) | 所有 API 端点、请求/响应格式、状态码规范（含规划中接口） |
-| [docs/database/overview.md](docs/database/overview.md) | 数据库概览、ERD、迁移策略、存储策略 |
-| [docs/database/current_schema.md](docs/database/current_schema.md) | 当前 5 张表完整定义、字段说明、状态机、数据样例 |
-| [docs/database/extension_plan.md](docs/database/extension_plan.md) | Phase 1~3 规划中的新表（cards、items、entities 等） |
+| [docs/product.md](docs/product.md) | 产品定位、五大模块、完整产品闭环 |
+| [docs/status.md](docs/status.md) | 当前实现状态、功能缺口、技术债务 |
+| [docs/roadmap.md](docs/roadmap.md) | 分阶段开发计划（Phase 1~4）+ 实现规格 |
+| [docs/architecture.md](docs/architecture.md) | 系统架构、模块职责、层间调用关系 |
+| [docs/api-design.md](docs/api-design.md) | API 端点、请求/响应格式、状态码规范 |
+| [docs/database/overview.md](docs/database/overview.md) | 数据库概览、ERD、迁移策略 |
+| [docs/database/current_schema.md](docs/database/current_schema.md) | 当前表结构定义 + 数据样例 |
+| [docs/database/extension_plan.md](docs/database/extension_plan.md) | Phase 1~3 规划中的新表 |
 | [docs/tech-stack.md](docs/tech-stack.md) | 技术选型及版本约束 |
 | [docs/external_api/](docs/external_api/) | 外部 API 参考文档（15+ 数据源） |
+
+### 阅读顺序
+
+根据你的角色选择起点：
+
+| 角色 | 阅读路径 |
+|-|-|
+| **新成员 / 初次了解项目** | [product](docs/product.md) → [architecture](docs/architecture.md) → [status](docs/status.md) → [roadmap](docs/roadmap.md) |
+| **接手某个功能开发** | [status](docs/status.md)（确认缺口）→ [roadmap](docs/roadmap.md)（实现规格）→ [api-design](docs/api-design.md) / [database](docs/database/overview.md) |
+| **AI 编程助手（Claude Code）** | 见 `CLAUDE.md`（已自动加载） |
 
 ---
 
@@ -110,36 +87,25 @@ graph TD
 - Python 3.11+
 - Node.js 20.x (LTS)
 - Docker Desktop（建议开启 WSL2）
-- Git
 
 ### 1. 配置环境变量
 
 在项目根目录创建 `.env` 文件（参考 `.env.example`）：
 
 ```env
-# 鉴权
 DECYPHER_SECRET_KEY=<openssl rand -hex 32 生成>
-DECYPHER_ACCESS_TOKEN_EXPIRE_MINUTES=10080
-
-# 数据库与缓存（Docker Compose 默认端口）
 DECYPHER_DATABASE_URL=postgresql+asyncpg://decypher:decypher123@localhost:5432/decypher_db
 DECYPHER_REDIS_URL=redis://localhost:6379/0
-
-# 大模型（openai | deepseek | ollama）
 DECYPHER_AI_PROVIDER=openai
 OPENAI_API_KEY=sk-proj-...
-DECYPHER_OPENAI_MODEL=gpt-4o-mini
-
-# 跨域
 NEXT_PUBLIC_API_URL=http://localhost:8000
 DECYPHER_ALLOWED_ORIGINS=http://localhost:3000
 ```
 
-### 2. 拉起数据库与缓存
+### 2. 启动基础设施
 
 ```powershell
 docker compose up -d
-# 验证：docker compose ps（确保 postgres 和 redis 状态为 Up）
 ```
 
 ### 3. 启动后端
@@ -152,7 +118,8 @@ pip install -r requirements.txt
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-访问 `http://localhost:8000/health` 验证启动；Swagger 文档在 `http://localhost:8000/api/docs`。
+验证：`http://localhost:8000/health` → `{"status": "healthy"}`  
+Swagger：`http://localhost:8000/api/docs`
 
 ### 4. 启动前端
 
@@ -162,7 +129,7 @@ npm install
 npm run dev
 ```
 
-打开 `http://localhost:3000` 查看仪表板。
+打开 `http://localhost:3000`。
 
 ---
 

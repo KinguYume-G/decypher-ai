@@ -56,11 +56,14 @@ decypher-ai/
 │   ├── store/index.ts           # Zustand stores（auth / task / chat）
 │   └── types/index.ts           # TypeScript 类型定义
 ├── docs/                        # 详细设计文档
-│   ├── architecture.md          # 模块划分、层间调用关系
-│   ├── api-design.md            # 所有 API 端点规范（含规划中接口）
+│   ├── product.md               # 产品定位、五大模块、完整产品闭环（稳定）
+│   ├── status.md                # 当前实现状态、缺口、技术债务（每 Sprint 更新）
+│   ├── roadmap.md               # 分阶段开发计划 + 实现规格（Phase 1~4）
+│   ├── architecture.md          # 系统架构、模块职责、层间调用关系
+│   ├── api-design.md            # API 端点规范（含规划中接口）
 │   ├── database/                # 数据库设计文档
 │   │   ├── overview.md          # 概览、ERD、迁移策略、存储策略
-│   │   ├── current_schema.md    # 当前 5 张表完整定义 + 数据样例
+│   │   ├── current_schema.md    # 当前表结构定义 + 数据样例
 │   │   └── extension_plan.md    # 扩展方案：Phase 1~3 规划中的新表
 │   ├── external_api/            # 外部 API 参考文档（15+ 数据源）
 │   └── tech-stack.md            # 技术选型及版本约束
