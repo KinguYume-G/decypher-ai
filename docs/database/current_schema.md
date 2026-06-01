@@ -1,31 +1,10 @@
-# Database Schema — Decypher AI 数据库设计
+# Current Schema — Decypher AI 现有表结构
+
+> 5 张表，由 `init_db()` 启动时自动建表。
 
 ---
 
-## 概览
-
-```
-数据库：PostgreSQL 15
-字符集：UTF-8
-时区：UTC（所有时间字段统一用 UTC 存储）
-```
-
-### 表关系图
-```
-users
-  │
-  ├── 1:N ──→ tasks ──── 1:N ──→ opportunities
-  │                                    │
-  ├── 1:N ──→ notes                    │ N:M
-  │                                    ▼
-  └────────────────────── user_favorites
-```
-
----
-
-## 表详情
-
-### `users` — 用户表
+## `users` — 用户表
 
 ```sql
 CREATE TABLE users (
@@ -39,7 +18,6 @@ CREATE TABLE users (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 索引
 CREATE INDEX idx_users_email    ON users(email);
 CREATE INDEX idx_users_username ON users(username);
 ```
@@ -57,15 +35,15 @@ CREATE INDEX idx_users_username ON users(username);
 
 ---
 
-### `tasks` — 分析任务表
+## `tasks` — 分析任务表
 
 ```sql
 CREATE TABLE tasks (
     id               SERIAL PRIMARY KEY,
     user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name             VARCHAR(200) NOT NULL,
-    keywords         JSONB NOT NULL DEFAULT '[]',   -- 关键词数组
-    sources          JSONB NOT NULL DEFAULT '[]',   -- 数据源数组
+    keywords         JSONB NOT NULL DEFAULT '[]',
+    sources          JSONB NOT NULL DEFAULT '[]',
     interval_seconds INTEGER NOT NULL DEFAULT 3600,
     status           VARCHAR(20) NOT NULL DEFAULT 'pending',
     is_active        BOOLEAN NOT NULL DEFAULT TRUE,
@@ -76,7 +54,6 @@ CREATE TABLE tasks (
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 索引
 CREATE INDEX idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX idx_tasks_status  ON tasks(status);
 ```
@@ -105,7 +82,7 @@ paused → pending（用户恢复）
 
 ---
 
-### `opportunities` — 机会结果表
+## `opportunities` — 机会结果表
 
 ```sql
 CREATE TABLE opportunities (
@@ -126,7 +103,6 @@ CREATE TABLE opportunities (
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 索引
 CREATE INDEX idx_opportunities_task_id    ON opportunities(task_id);
 CREATE INDEX idx_opportunities_score_total ON opportunities(score_total DESC);
 CREATE INDEX idx_opportunities_created_at  ON opportunities(created_at DESC);
@@ -151,44 +127,7 @@ CREATE INDEX idx_opportunities_created_at  ON opportunities(created_at DESC);
 
 ---
 
-## 数据样例
-
-### tasks 表样例
-```json
-{
-  "id": 1,
-  "user_id": 1,
-  "name": "AI Agent 机会追踪",
-  "keywords": ["ai agent", "llm", "autonomous"],
-  "sources": ["github", "hackernews"],
-  "interval_seconds": 3600,
-  "status": "completed",
-  "run_count": 5
-}
-```
-
-### opportunities 表样例
-```json
-{
-  "id": 1,
-  "task_id": 1,
-  "title": "AI Agent 测试自动化工具",
-  "what_to_build": "一个专为 AI Agent 设计的端到端测试框架，支持 prompt injection 检测、行为一致性验证",
-  "why_it_matters": "GitHub 上有超过 2000 个 Issue 请求 AI Agent 测试工具，现有测试工具无法处理非确定性输出",
-  "how_to_execute": "MVP: 先做 ReAct 模式 Agent 的行为记录和回放功能，接入 LangChain/AutoGen",
-  "score_trend": 9.0,
-  "score_novelty": 7.5,
-  "score_competition": 3.0,
-  "score_feasibility": 8.0,
-  "score_commercial": 8.5,
-  "score_total": 7.2,
-  "keywords_matched": ["ai agent", "llm"]
-}
-```
-
----
-
-### `notes` — 用户笔记表
+## `notes` — 用户笔记表
 
 ```sql
 CREATE TABLE notes (
@@ -212,7 +151,9 @@ CREATE INDEX idx_notes_user_id ON notes(user_id);
 
 ---
 
-### `user_favorites` — 用户收藏表（多对多）
+## `user_favorites` — 用户收藏表（多对多）
+
+> ⚠️ Phase 1 引入 `cards` 表后，FK 将从 `opportunity_id` 迁移到 `card_id`。见 [extension_plan.md](./extension_plan.md)。
 
 ```sql
 CREATE TABLE user_favorites (
@@ -234,22 +175,41 @@ CREATE INDEX idx_user_favorites_opportunity_id ON user_favorites(opportunity_id)
 | opportunity_id | INTEGER | FK → opportunities.id |
 | created_at | TIMESTAMPTZ | 收藏时间 |
 
-唯一约束 `uq_user_opportunity` 防止同一用户重复收藏同一机会；`POST /cards/{id}/favorite` 为幂等接口，已收藏则取消，未收藏则添加。
+唯一约束防止同一用户重复收藏；`POST /cards/{id}/favorite` 为幂等接口，已收藏则取消，未收藏则添加。
 
 ---
 
-## 迁移策略
+## 数据样例
 
-- **开发环境**：`init_db()` 启动时自动 `CREATE TABLE IF NOT EXISTS`（直接用 SQLAlchemy metadata）
-- **生产环境**：使用 Alembic 管理版本化迁移（MVP 阶段先不用）
+### tasks 表
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "name": "AI Agent 机会追踪",
+  "keywords": ["ai agent", "llm", "autonomous"],
+  "sources": ["github", "hackernews"],
+  "interval_seconds": 3600,
+  "status": "completed",
+  "run_count": 5
+}
+```
 
----
-
-## 存储策略
-
-| 数据类型 | 存储位置 | 原因 |
-|-|-|-|
-| 用户/任务/机会 | PostgreSQL | 需要事务、关联查询 |
-| Session/缓存 | Redis | 高速读写，可丢失 |
-| APScheduler Jobs | Redis | 持久化 Job 元数据 |
-| 原始信号数据 | **不持久化** | 每次重新采集，控制存储成本 |
+### opportunities 表
+```json
+{
+  "id": 1,
+  "task_id": 1,
+  "title": "AI Agent 测试自动化工具",
+  "what_to_build": "一个专为 AI Agent 设计的端到端测试框架，支持 prompt injection 检测、行为一致性验证",
+  "why_it_matters": "GitHub 上有超过 2000 个 Issue 请求 AI Agent 测试工具，现有测试工具无法处理非确定性输出",
+  "how_to_execute": "MVP: 先做 ReAct 模式 Agent 的行为记录和回放功能，接入 LangChain/AutoGen",
+  "score_trend": 9.0,
+  "score_novelty": 7.5,
+  "score_competition": 3.0,
+  "score_feasibility": 8.0,
+  "score_commercial": 8.5,
+  "score_total": 7.2,
+  "keywords_matched": ["ai agent", "llm"]
+}
+```

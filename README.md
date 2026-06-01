@@ -6,7 +6,43 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis)
 
+---
+
+## 一、产品定位（我们在做什么）
+
 **Decypher AI** 是一款面向科技创业者和研究者的 **AI 智能情报决策平台**。它持续监测全网碎片化信号（GitHub、Hacker News、arXiv、Product Hunt、SEC EDGAR 等 15 个以上数据源），运用大语言模型对信号进行结构化分析和多维度评分，并在 Bento Grid 仪表板上展示可操作的机会卡片，右侧配备联动的 AI Analyst 智能助理。
+
+它不是新闻聚合器，也不是聊天机器人，而是一个**闭环情报引擎**：
+
+```
+公开数据源 → AI 采集清洗 → LLM 分析评分 → 信息卡片 Dashboard
+→ 用户点击反馈 → AI 深度解读 → 生成报告/笔记 → 系统记住用户偏好
+```
+
+### 核心价值主张
+
+| 传统工具 | Decypher AI |
+| - | - |
+| 手动看新闻、筛信息 | 自动抓取 + AI 归因 |
+| 分散工具（论文/新闻/财报各一套） | 五模块统一平台 |
+| 普通聊天 AI | 基于当前信号的上下文分析师 |
+| 静态仪表板 | 用户行为反馈的自适应推荐 |
+
+---
+
+## 二、五大核心模块
+
+每个模块共用底层同一套数据管道，只是**信号来源和 Prompt 侧重不同**。
+
+| 模块 | 核心数据源 | AI 分析重点 |
+| - | - | - |
+| **商业市场** | Product Hunt、HN、公司 Blog、GitHub 热门项目 | 行业动态、产品发布、市场机会、竞品分析 |
+| **学术研究** | arXiv、OpenAlex、Crossref、GitHub | 论文总结、研究趋势、paper-to-project 建议 |
+| **创业机会** | GitHub Show HN、Product Hunt、DEV.to | 市场机会评分、MVP 建议、商业模式、竞品 |
+| **股市动态** | SEC EDGAR、公司 IR、GDELT 新闻 | 财报摘要、AI 业务信号、新闻情绪（仅研究，不写买卖建议） |
+| **求职热点** | Stack Exchange、GitHub Jobs、HN Hiring | 技能需求、岗位趋势、学习路线推荐 |
+
+**同一条数据可跨模块使用**：`LangGraph 热度上升` → 同时出现在商业市场、学术研究、创业机会和求职热点。
 
 ---
 
@@ -58,10 +94,12 @@ graph TD
 | 文档 | 内容 |
 |-|-|
 | [docs/architecture.md](docs/architecture.md) | 模块划分、文件职责、层间调用关系 |
-| [docs/api-design.md](docs/api-design.md) | 所有 API 端点、请求/响应格式、状态码规范 |
-| [docs/database-schema.md](docs/database-schema.md) | 数据库表结构、字段说明、状态机、ERD |
+| [docs/api-design.md](docs/api-design.md) | 所有 API 端点、请求/响应格式、状态码规范（含规划中接口） |
+| [docs/database/overview.md](docs/database/overview.md) | 数据库概览、ERD、迁移策略、存储策略 |
+| [docs/database/current_schema.md](docs/database/current_schema.md) | 当前 5 张表完整定义、字段说明、状态机、数据样例 |
+| [docs/database/extension_plan.md](docs/database/extension_plan.md) | Phase 1~3 规划中的新表（cards、items、entities 等） |
 | [docs/tech-stack.md](docs/tech-stack.md) | 技术选型及版本约束 |
-| [docs/external_api/](docs/external_api/) | 外部 API 调用文档 |
+| [docs/external_api/](docs/external_api/) | 外部 API 参考文档（15+ 数据源） |
 
 ---
 

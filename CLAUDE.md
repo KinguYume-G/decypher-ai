@@ -57,8 +57,12 @@ decypher-ai/
 │   └── types/index.ts           # TypeScript 类型定义
 ├── docs/                        # 详细设计文档
 │   ├── architecture.md          # 模块划分、层间调用关系
-│   ├── api-design.md            # 所有 API 端点规范
-│   ├── database-schema.md       # 数据库表结构 + ERD
+│   ├── api-design.md            # 所有 API 端点规范（含规划中接口）
+│   ├── database/                # 数据库设计文档
+│   │   ├── overview.md          # 概览、ERD、迁移策略、存储策略
+│   │   ├── current_schema.md    # 当前 5 张表完整定义 + 数据样例
+│   │   └── extension_plan.md    # 扩展方案：Phase 1~3 规划中的新表
+│   ├── external_api/            # 外部 API 参考文档（15+ 数据源）
 │   └── tech-stack.md            # 技术选型及版本约束
 ├── docker-compose.yml           # PostgreSQL 15 + Redis 7
 └── .env.example                 # 环境变量模板（复制为 .env 后填值）

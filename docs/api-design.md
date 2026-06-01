@@ -428,3 +428,28 @@ cards 是 opportunities 的前端视图：按 category 分桶展示，自动附�
 - JSON 字段：`snake_case`（如 `created_at`）
 - 枚举值：`lowercase`（如 `"pending"`, `"running"`）
 - 时间格式：ISO 8601 UTC（如 `"2024-01-01T00:00:00Z"`）
+
+---
+
+## 规划中的接口（未实现）
+
+以下接口在路线图中已规划，尚未实现。
+
+### Phase 1
+
+```
+POST   /api/v1/cards/{id}/like          # 点赞（独立于收藏）
+GET    /api/v1/cards/{id}               # 卡片详情（含 detail_analysis）
+```
+
+### Phase 3
+
+```
+# 聊天会话持久化
+GET    /api/v1/chat/sessions            # 历史会话列表
+GET    /api/v1/chat/sessions/{id}       # 单个会话详情
+
+# 报告生成
+POST   /api/v1/reports/weekly           # 生成本周报告
+GET    /api/v1/reports                  # 报告列表
+```

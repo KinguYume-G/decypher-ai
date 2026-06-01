@@ -1,91 +1,12 @@
 # Decypher AI — 产品理解与开发方案
 
-> **文档性质**：完整的产品认知 + 现有代码审查 + 缺口分析 + 分阶段开发路线图  
+> **文档性质**：产品认知 + 现有代码审查 + 缺口分析 + 分阶段开发路线图  
 > **编写时间**：2026-06-01  
 > **读者**：Decypher AI 开发团队
 
 ---
 
-## 一、产品定位（我们在做什么）
-
-Decypher AI 是一款 **AI 驱动的科技情报决策平台**，目标用户是科技创始人、投资人和研究人员。
-
-它不是新闻聚合器，也不是聊天机器人，而是一个**闭环情报引擎**：
-
-```
-公开数据源 → AI 采集清洗 → LLM 分析评分 → 信息卡片 Dashboard
-→ 用户点击反馈 → AI 深度解读 → 生成报告/笔记 → 系统记住用户偏好
-```
-
-### 核心价值主张
-
-| 传统工具 | Decypher AI |
-| - | - |
-| 手动看新闻、筛信息 | 自动抓取 + AI 归因 |
-| 分散工具（论文/新闻/财报各一套） | 五模块统一平台 |
-| 普通聊天 AI | 基于当前信号的上下文分析师 |
-| 静态仪表板 | 用户行为反馈的自适应推荐 |
-
----
-
-## 二、五大核心模块
-
-每个模块共用底层同一套数据管道，只是**信号来源和 Prompt 侧重不同**。
-
-| 模块 | 核心数据源 | AI 分析重点 |
-| - | - | - |
-| **商业市场** | Product Hunt、HN、公司 Blog、GitHub 热门项目 | 行业动态、产品发布、市场机会、竞品分析 |
-| **学术研究** | arXiv、OpenAlex、Crossref、GitHub | 论文总结、研究趋势、paper-to-project 建议 |
-| **创业机会** | GitHub Show HN、Product Hunt、DEV.to | 市场机会评分、MVP 建议、商业模式、竞品 |
-| **股市动态** | SEC EDGAR、公司 IR、GDELT 新闻 | 财报摘要、AI 业务信号、新闻情绪（仅研究，不写买卖建议） |
-| **求职热点** | Stack Exchange、GitHub Jobs、HN Hiring | 技能需求、岗位趋势、学习路线推荐 |
-
-**同一条数据可跨模块使用**：`LangGraph 热度上升` → 同时出现在商业市场、学术研究、创业机会和求职热点。
-
----
-
-## 三、系统架构总图
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                      用户浏览器                          │
-│  左侧导航   │   中间卡片 Bento Grid   │  右侧 AI Analyst  │
-└─────────────────────────────────────────────────────────┘
-                        │ REST API
-┌─────────────────────────────────────────────────────────┐
-│                   FastAPI Backend (ASGI)                │
-│  /api/v1/auth  /api/v1/tasks  /api/v1/opportunities     │
-│  /api/v1/cards  /api/v1/chat  /api/v1/reports           │
-└──────────┬────────────────────────┬─────────────────────┘
-           │                        │
-    ┌──────▼──────┐        ┌────────▼──────────┐
-    │ AI Pipeline │        │  APScheduler Jobs │
-    │             │        │  (Redis JobStore) │
-    │ Orchestrator│        │  每 6h/12h/每天    │
-    │ Collector   │        └───────────────────┘
-    │ Processor   │
-    │ LLM Client  │
-    │ Agents      │
-    └──────┬──────┘
-           │
-    ┌──────▼──────────────────────────────────────────────┐
-    │                  外部数据源                          │
-    │ GitHub API │ HN API │ arXiv │ OpenAlex │ SEC EDGAR  │
-    │ Product Hunt │ Stack Exchange │ DEV.to │ GDELT      │
-    └─────────────────────────────────────────────────────┘
-           │
-    ┌──────▼──────────────────────────────────────────────┐
-    │                    数据库层                          │
-    │  PostgreSQL 15 (主数据库)    Redis 7 (任务调度)       │
-    │  items | cards | entities | embeddings | reports    │
-    └─────────────────────────────────────────────────────┘
-```
-
----
-
-## 四、现有代码盘点（已实现的部分）
-
-通过完整读取所有源代码，目前已实现：
+## 三、现有代码盘点（已实现的部分）
 
 ### ✅ 已完成（可用）
 
@@ -135,8 +56,6 @@ Decypher AI 是一款 **AI 驱动的科技情报决策平台**，目标用户是
 
 ### ⚠️ 缺口分析（未实现 / 需要扩展）
 
-对照完整产品愿景，以下功能**目前还不存在**：
-
 #### 后端缺口
 
 | 缺失功能 | 重要程度 | 说明 |
@@ -170,107 +89,11 @@ Decypher AI 是一款 **AI 驱动的科技情报决策平台**，目标用户是
 
 ---
 
-## 五、数据库扩展方案
-
-在现有 `users`、`tasks`、`opportunities` 三张表基础上，需要新增：
-
-### 新增核心表
-
-```sql
--- ── 信息卡片表（核心展示单元）─────────────────────────────────
-CREATE TABLE cards (
-    id              SERIAL PRIMARY KEY,
-    user_id         INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    -- 可以是 AI 生成（绑 opportunity）或系统自动生成（绑 item）
-    opportunity_id  INTEGER REFERENCES opportunities(id) ON DELETE SET NULL,
-    category        VARCHAR(50) NOT NULL,   -- 'market' | 'research' | 'startup' | 'stocks' | 'jobs'
-    title           VARCHAR(300) NOT NULL,
-    summary         TEXT NOT NULL,
-    score           FLOAT NOT NULL DEFAULT 0.0,
-    tags            JSONB NOT NULL DEFAULT '[]',
-    source          VARCHAR(100),           -- 'github' | 'hackernews' | 'arxiv' | ...
-    detail_analysis TEXT,                   -- AI 深度分析全文
-    risk_notes      TEXT,
-    next_steps      TEXT,
-    is_favorited    BOOLEAN NOT NULL DEFAULT FALSE,
-    like_count      INTEGER NOT NULL DEFAULT 0,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX idx_cards_category ON cards(category);
-CREATE INDEX idx_cards_score ON cards(score DESC);
-CREATE INDEX idx_cards_user_id ON cards(user_id);
-
--- ── 原始信号/数据项表 ────────────────────────────────────────
-CREATE TABLE items (
-    id              SERIAL PRIMARY KEY,
-    source          VARCHAR(50) NOT NULL,   -- 'github' | 'hackernews' | 'arxiv' | 'sec' | ...
-    category        VARCHAR(50),            -- 哪个模块使用
-    external_id     VARCHAR(200),           -- 原始 ID（避免重复抓取）
-    title           VARCHAR(500) NOT NULL,
-    body            TEXT,
-    url             VARCHAR(2000),
-    author          VARCHAR(200),
-    score           INTEGER DEFAULT 0,      -- stars/upvotes/citations
-    content_hash    VARCHAR(64) UNIQUE,     -- SHA256 去重
-    published_at    TIMESTAMPTZ,
-    fetched_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX idx_items_source ON items(source);
-CREATE INDEX idx_items_category ON items(category);
-CREATE INDEX idx_items_content_hash ON items(content_hash);
-
--- ── 实体表 ──────────────────────────────────────────────────
-CREATE TABLE entities (
-    id          SERIAL PRIMARY KEY,
-    name        VARCHAR(200) NOT NULL,
-    type        VARCHAR(50) NOT NULL,    -- 'company' | 'technology' | 'job_role' | 'paper_topic' | 'product'
-    aliases     JSONB DEFAULT '[]',
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- ── 用户收藏表 ───────────────────────────────────────────────
-CREATE TABLE user_favorites (
-    id          SERIAL PRIMARY KEY,
-    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    card_id     INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (user_id, card_id)
-);
-
--- ── 聊天会话表 ───────────────────────────────────────────────
-CREATE TABLE chat_sessions (
-    id              SERIAL PRIMARY KEY,
-    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    card_id         INTEGER REFERENCES cards(id) ON DELETE SET NULL,
-    messages        JSONB NOT NULL DEFAULT '[]',
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- ── 报告表 ──────────────────────────────────────────────────
-CREATE TABLE reports (
-    id          SERIAL PRIMARY KEY,
-    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type        VARCHAR(50) NOT NULL,   -- 'weekly' | 'startup' | 'company' | 'learning_path'
-    title       VARCHAR(300) NOT NULL,
-    content     TEXT NOT NULL,
-    metadata    JSONB DEFAULT '{}',
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- ── 向量嵌入（pgvector 支持后启用）──────────────────────────
--- CREATE EXTENSION IF NOT EXISTS vector;
--- ALTER TABLE items ADD COLUMN embedding vector(384);
--- CREATE INDEX idx_items_embedding ON items USING ivfflat (embedding vector_cosine_ops);
-```
-
----
-
-## 六、新增数据采集器
+## 四、新增数据采集器
 
 在 `backend/app/services/` 下新增以下 Collector，继承 `BaseDataService`：
 
-### 6.1 arXiv 采集器（学术研究）
+### 4.1 arXiv 采集器（学术研究）
 
 ```python
 # arxiv_service.py
@@ -279,7 +102,7 @@ CREATE TABLE reports (
 # 字段映射：title→title, abstract→body, arxiv_id→url
 ```
 
-### 6.2 OpenAlex 采集器（学术研究增强）
+### 4.2 OpenAlex 采集器（学术研究增强）
 
 ```python
 # openalex_service.py
@@ -287,7 +110,7 @@ CREATE TABLE reports (
 # 可获取引用量、机构、领域分类
 ```
 
-### 6.3 Product Hunt 采集器（商业/创业）
+### 4.3 Product Hunt 采集器（商业/创业）
 
 ```python
 # producthunt_service.py
@@ -296,7 +119,7 @@ CREATE TABLE reports (
 # 抓取 today's products、投票数、标签
 ```
 
-### 6.4 SEC EDGAR 采集器（股市）
+### 4.4 SEC EDGAR 采集器（股市）
 
 ```python
 # sec_service.py
@@ -306,7 +129,7 @@ CREATE TABLE reports (
 # 注意：只做研究，prompt 中明确禁止写买卖建议
 ```
 
-### 6.5 Stack Exchange 采集器（求职/技术热点）
+### 4.5 Stack Exchange 采集器（求职/技术热点）
 
 ```python
 # stackexchange_service.py
@@ -316,7 +139,7 @@ CREATE TABLE reports (
 
 ---
 
-## 七、新增 AI Agents
+## 五、新增 AI Agents
 
 在 `backend/app/services/agents/` 下实现各专业 Agent，每个 Agent 本质是带专用 System Prompt 的 `chat_completion` 封装：
 
@@ -366,9 +189,9 @@ async def reply_with_rag(message, card, history, db):
 
 ---
 
-## 八、前端核心交互升级
+## 六、前端核心交互升级
 
-### 8.1 五模块 Tab 切换（最高优先级）
+### 6.1 五模块 Tab 切换（最高优先级）
 
 Dashboard 顶导栏的 Tab 点击需要：
 
@@ -382,7 +205,7 @@ const { cards } = useCards({ category: activeModule, limit: 6 });
 
 后端需要新增 `/api/v1/cards` 接口，支持 `?category=` 过滤。
 
-### 8.2 卡片选中 → 右侧联动（核心交互）
+### 6.2 卡片选中 → 右侧联动（核心交互）
 
 这是整个产品最核心的 UX：
 
@@ -403,13 +226,13 @@ interface SelectedCardState {
 // 用户点"Analyze"时，发起 chat 请求带上 card_id
 ```
 
-### 8.3 Notes 笔记页
+### 6.3 Notes 笔记页
 
 路径：`/notes`  
 功能：用户在 AI 对话中生成的洞察，可以手动保存为笔记。  
-后端：`POST /api/v1/notes`，数据存 `reports` 表的 `type='note'`。
+后端：`POST /api/v1/notes`，数据存 `notes` 表。
 
-### 8.4 收藏 & 点赞
+### 6.4 收藏 & 点赞
 
 ```typescript
 // 每张卡片的 favorite 按钮：
@@ -421,7 +244,7 @@ const handleFavorite = async (cardId: number) => {
 
 ---
 
-## 九、分阶段开发路线图
+## 七、分阶段开发路线图
 
 ### Phase 1 — 完善核心闭环（1-2 周）
 
@@ -432,7 +255,7 @@ const handleFavorite = async (cardId: number) => {
 - [ ] Opportunity 模型增加 `category` 字段（迁移现有数据 → 默认值 "startup"）
 - [ ] 新增 `/api/v1/cards` 接口，支持 `?category=market|research|startup|stocks|jobs` 过滤
 - [ ] 新增 `POST /api/v1/cards/{id}/favorite` 和 `POST /api/v1/cards/{id}/like`
-- [ ] 新增 `user_favorites` 表
+- [ ] 新增 `user_favorites` 表（FK 迁移到 card_id，见 [extension_plan.md](docs/database/extension_plan.md)）
 - [ ] Reddit 采集器完整实现（PRAW 库）
 
 **前端：**
@@ -504,34 +327,7 @@ const handleFavorite = async (cardId: number) => {
 
 ---
 
-## 十、关键 API 接口扩展清单
-
-在现有 4 个路由之上，需要新增：
-
-```
-# 卡片相关（前端展示核心）
-GET    /api/v1/cards?category=&limit=6&sort=score   # 按模块获取卡片
-GET    /api/v1/cards/{id}                            # 卡片详情
-POST   /api/v1/cards/{id}/favorite                   # 收藏/取消收藏
-POST   /api/v1/cards/{id}/like                       # 点赞
-
-# 聊天增强
-GET    /api/v1/chat/sessions                          # 历史会话列表
-GET    /api/v1/chat/sessions/{id}                     # 单个会话详情
-
-# 报告
-POST   /api/v1/reports/weekly                         # 生成本周报告
-GET    /api/v1/reports                                # 报告列表
-
-# 笔记
-POST   /api/v1/notes                                  # 保存笔记
-GET    /api/v1/notes                                  # 笔记列表
-DELETE /api/v1/notes/{id}                             # 删除笔记
-```
-
----
-
-## 十一、技术债务和注意事项
+## 八、技术债务和注意事项
 
 > [!WARNING]
 > **`source_signals` 字段始终为 `[]`**  
@@ -555,7 +351,7 @@ DELETE /api/v1/notes/{id}                             # 删除笔记
 
 ---
 
-## 十二、最终产品闭环
+## 九、最终产品闭环
 
 ```
 用户打开 Decypher AI（首页看到五个模块）
@@ -583,4 +379,4 @@ AI Agent 分析、评分、生成 6 张信息卡片
 
 ---
 
-_文档版本：v1.0 · 基于代码库完整扫描生成_
+_文档版本：v1.1 · 2026-06-01 整理（移除架构图重复内容，DB 扩展方案见 [docs/database/extension_plan.md](docs/database/extension_plan.md)，规划 API 见 [docs/api-design.md](docs/api-design.md)）_
