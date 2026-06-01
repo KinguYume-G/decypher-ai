@@ -60,7 +60,15 @@ decypher-ai/
 │   ├── status.md                # 当前实现状态、缺口、技术债务（每 Sprint 更新）
 │   ├── roadmap.md               # 分阶段开发计划 + 实现规格（Phase 1~4）
 │   ├── architecture.md          # 系统架构、模块职责、层间调用关系
-│   ├── api-design.md            # API 端点规范（含规划中接口）
+│   ├── api/                     # API 接口文档（按资源分文件）
+│   │   ├── conventions.md       # 全局约定：响应格式、状态码、认证、命名
+│   │   ├── auth.md              # /auth 注册、登录、当前用户
+│   │   ├── tasks.md             # /tasks CRUD + 手动触发
+│   │   ├── opportunities.md     # /opportunities 列表 + 详情
+│   │   ├── cards.md             # /cards 卡片列表 + 收藏
+│   │   ├── chat.md              # /chat SSE 流式 + 非流式
+│   │   ├── notes.md             # /notes CRUD
+│   │   └── system.md            # /seed + /health + 规划中接口
 │   ├── database/                # 数据库设计文档
 │   │   ├── overview.md          # 概览、ERD、迁移策略、存储策略
 │   │   ├── current_schema.md    # 当前表结构定义 + 数据样例
