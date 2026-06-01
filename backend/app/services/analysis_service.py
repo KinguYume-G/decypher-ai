@@ -1,3 +1,5 @@
+# Converts a formatted signal text block into structured Opportunity JSON with 5-dimension scores via the LLM.
+# 调用 LLM 将格式化后的信号文本块转化为含 5 维评分的结构化 Opportunity JSON。
 import json
 import logging
 import re

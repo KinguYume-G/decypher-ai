@@ -1,3 +1,5 @@
+# Builds the AI Analyst system prompt and streams LLM token chunks back to the caller as an async generator.
+# 构建 AI Analyst 系统提示词，并将 LLM 的 token 流以异步生成器形式返回给调用方。
 import logging
 from collections.abc import AsyncGenerator
 

@@ -1,3 +1,5 @@
+# Fetches ML paper metadata and linked GitHub repos from the Papers With Code API.
+# 调用 Papers With Code API 获取 ML 论文元数据及关联的 GitHub 仓库链接。
 import logging
 
 import httpx

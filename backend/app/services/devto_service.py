@@ -1,3 +1,5 @@
+# Fetches recent tech articles from the Dev.to public REST API.
+# 调用 Dev.to 公开 REST API 获取最新技术文章。
 import logging
 
 import httpx

@@ -1,3 +1,5 @@
+# All Pydantic request/response schemas: APIResponse[T] wrapper, User/Task/Opportunity/Note/Chat types.
+# 所有 Pydantic 请求/响应 Schema：通用 APIResponse[T] 包装格式及各业务实体的数据校验模型。
 from datetime import datetime
 from typing import Generic, Literal, TypeVar
 

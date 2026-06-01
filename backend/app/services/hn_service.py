@@ -1,3 +1,5 @@
+# Searches Hacker News stories and comments via the Algolia HN Search API (no auth required).
+# 通过 Algolia HN Search API 搜索 Hacker News 帖子和评论（无需认证）。
 import logging
 
 import httpx

@@ -1,3 +1,5 @@
+# Shared pytest fixtures: in-memory SQLite DB, unauthenticated AsyncClient, and pre-logged-in auth_client.
+# 共享 pytest 夹具：内存 SQLite 测试库、未认证 AsyncClient 及已登录的 auth_client。
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient

@@ -1,3 +1,5 @@
+# JWT token creation/verification (python-jose) and bcrypt password hashing/verification; used by auth routes and deps.
+# JWT 生成与验证（python-jose）及 bcrypt 密码哈希/校验工具；被认证路由和 deps.py 调用。
 from datetime import datetime, timedelta, timezone
 
 import bcrypt

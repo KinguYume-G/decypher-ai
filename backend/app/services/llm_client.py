@@ -1,3 +1,5 @@
+# OpenAI SDK wrapper: chat() returns a full string, stream() yields token chunks; all LLM calls route through here.
+# OpenAI SDK 封装：chat() 同步返回完整字符串，stream() 异步逐 token 生成；所有大模型调用统一经此。
 import logging
 from collections.abc import AsyncGenerator
 from typing import Any

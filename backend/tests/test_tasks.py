@@ -1,3 +1,5 @@
+# Tests for task CRUD endpoints and POST /{id}/run (manual pipeline trigger).
+# 测试任务 CRUD 端点及 POST /{id}/run（手动触发 Pipeline）。
 from unittest.mock import patch
 
 import pytest

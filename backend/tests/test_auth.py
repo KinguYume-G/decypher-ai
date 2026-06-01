@@ -1,3 +1,5 @@
+# Tests for POST /register, POST /login, and GET /me auth endpoints.
+# 测试 POST /register、POST /login 及 GET /me 认证端点。
 import pytest
 
 

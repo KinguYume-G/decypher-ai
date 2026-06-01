@@ -36,7 +36,7 @@
 
 ### HTTP 状态码规范
 | 状态码 | 场景 |
-|--------|------|
+|-|-|
 | 200 | 成功（GET / PATCH / DELETE） |
 | 201 | 创建成功（POST） |
 | 400 | 请求参数错误 |
@@ -204,7 +204,7 @@ Header: Authorization: Bearer <jwt_token>
 ### GET `/api/v1/opportunities` — 获取机会列表
 **Query Params**
 | 参数 | 类型 | 说明 |
-|------|------|------|
+|-|-|-|
 | `task_id` | int（可选） | 按任务过滤 |
 | `limit` | int（默认20） | 返回数量 |
 
@@ -290,6 +290,126 @@ data: {"type": "action", "data": {"action": "update_task", "params": {"keywords"
 
 ---
 
+## 情报卡片接口 `/api/v1/cards` 🔒
+
+cards 是 opportunities 的前端视图：按 category 分桶展示，自动附带收藏状态。
+
+### GET `/api/v1/cards` — 获取情报卡片列表
+**Query Params**
+| 参数 | 类型 | 说明 |
+|-|-|-|
+| `category` | string（可选） | `market` / `research` / `startup` / `stocks` / `jobs` |
+| `limit` | int（默认 6，最大 50） | 返回数量 |
+| `favorited` | bool（可选） | `true` → 只返回已收藏的卡片 |
+
+**Response**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "task_id": 2,
+      "category": "research",
+      "title": "AI Agent 测试框架",
+      "what_to_build": "...",
+      "why_it_matters": "...",
+      "how_to_execute": "...",
+      "score_trend": 9.0,
+      "score_novelty": 7.5,
+      "score_competition": 3.0,
+      "score_feasibility": 8.0,
+      "score_commercial": 8.5,
+      "score_total": 7.2,
+      "is_favorited": false,
+      "created_at": "2024-01-01T01:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### POST `/api/v1/cards/{card_id}/favorite` — 切换收藏状态
+幂等操作：已收藏则取消，未收藏则添加。
+
+**Response**
+```json
+{
+  "success": true,
+  "data": { "is_favorited": true }
+}
+```
+
+---
+
+## 笔记接口 `/api/v1/notes` 🔒
+
+### GET `/api/v1/notes` — 获取笔记列表
+**Response**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "AI Agent 调研笔记",
+      "content": "...",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### POST `/api/v1/notes` — 创建笔记
+**Request Body**
+```json
+{
+  "title": "笔记标题",
+  "content": "笔记正文内容"
+}
+```
+**Response 201**：返回创建的 Note 对象（同列表中的单项格式）
+
+---
+
+### PATCH `/api/v1/notes/{note_id}` — 更新笔记
+**Request Body**（所有字段可选）
+```json
+{
+  "title": "新标题",
+  "content": "新内容"
+}
+```
+
+---
+
+### DELETE `/api/v1/notes/{note_id}` — 删除笔记
+**Response**
+```json
+{ "success": true, "data": null }
+```
+
+---
+
+## 演示数据接口 `/api/v1/seed` 🔒
+
+### POST `/api/v1/seed` — 一键初始化演示数据
+为 5 个分类（market/research/startup/stocks/jobs）各创建一个默认任务并立即触发分析。
+**仅在数据库任务表为空时执行，有数据则跳过。**
+
+**Response**
+```json
+{
+  "success": true,
+  "data": { "message": "已初始化 5 个演示任务，分析结果稍后可查看" }
+}
+```
+
+---
+
 ## 系统接口
 
 ### GET `/health` — 健康检查（无需认证）
@@ -308,3 +428,28 @@ data: {"type": "action", "data": {"action": "update_task", "params": {"keywords"
 - JSON 字段：`snake_case`（如 `created_at`）
 - 枚举值：`lowercase`（如 `"pending"`, `"running"`）
 - 时间格式：ISO 8601 UTC（如 `"2024-01-01T00:00:00Z"`）
+
+---
+
+## 规划中的接口（未实现）
+
+以下接口在路线图中已规划，尚未实现。
+
+### Phase 1
+
+```
+POST   /api/v1/cards/{id}/like          # 点赞（独立于收藏）
+GET    /api/v1/cards/{id}               # 卡片详情（含 detail_analysis）
+```
+
+### Phase 3
+
+```
+# 聊天会话持久化
+GET    /api/v1/chat/sessions            # 历史会话列表
+GET    /api/v1/chat/sessions/{id}       # 单个会话详情
+
+# 报告生成
+POST   /api/v1/reports/weekly           # 生成本周报告
+GET    /api/v1/reports                  # 报告列表
+```

@@ -1,3 +1,5 @@
+# Opportunities routes: GET list (filter by task_id/category), GET detail — raw AI analysis output before card display.
+# 机会路由：GET 列表（支持 task_id / category 过滤）及 GET 详情，返回卡片展示前的 AI 原始分析结果。
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession

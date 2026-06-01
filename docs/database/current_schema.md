@@ -1,29 +1,10 @@
-# Database Schema — Decypher AI 数据库设计
+# Current Schema — Decypher AI 现有表结构
+
+> 5 张表，由 `init_db()` 启动时自动建表。
 
 ---
 
-## 概览
-
-```
-数据库：PostgreSQL 15
-字符集：UTF-8
-时区：UTC（所有时间字段统一用 UTC 存储）
-```
-
-### 表关系图
-```
-users
-  │
-  │ 1:N
-  ▼
-tasks ──── 1:N ──→ opportunities
-```
-
----
-
-## 表详情
-
-### `users` — 用户表
+## `users` — 用户表
 
 ```sql
 CREATE TABLE users (
@@ -37,13 +18,12 @@ CREATE TABLE users (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 索引
 CREATE INDEX idx_users_email    ON users(email);
 CREATE INDEX idx_users_username ON users(username);
 ```
 
 | 字段 | 类型 | 约束 | 说明 |
-|------|------|------|------|
+|-|-|-|-|
 | id | SERIAL | PK | 自增主键 |
 | email | VARCHAR(255) | UNIQUE, NOT NULL | 登录邮箱 |
 | username | VARCHAR(100) | UNIQUE, NOT NULL | 显示名称 |
@@ -55,15 +35,15 @@ CREATE INDEX idx_users_username ON users(username);
 
 ---
 
-### `tasks` — 分析任务表
+## `tasks` — 分析任务表
 
 ```sql
 CREATE TABLE tasks (
     id               SERIAL PRIMARY KEY,
     user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name             VARCHAR(200) NOT NULL,
-    keywords         JSONB NOT NULL DEFAULT '[]',   -- 关键词数组
-    sources          JSONB NOT NULL DEFAULT '[]',   -- 数据源数组
+    keywords         JSONB NOT NULL DEFAULT '[]',
+    sources          JSONB NOT NULL DEFAULT '[]',
     interval_seconds INTEGER NOT NULL DEFAULT 3600,
     status           VARCHAR(20) NOT NULL DEFAULT 'pending',
     is_active        BOOLEAN NOT NULL DEFAULT TRUE,
@@ -74,13 +54,12 @@ CREATE TABLE tasks (
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 索引
 CREATE INDEX idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX idx_tasks_status  ON tasks(status);
 ```
 
 | 字段 | 类型 | 说明 |
-|------|------|------|
+|-|-|-|
 | id | SERIAL | PK |
 | user_id | INTEGER | FK → users.id，CASCADE 删除 |
 | name | VARCHAR(200) | 任务名称，用户自定义 |
@@ -103,7 +82,7 @@ paused → pending（用户恢复）
 
 ---
 
-### `opportunities` — 机会结果表
+## `opportunities` — 机会结果表
 
 ```sql
 CREATE TABLE opportunities (
@@ -124,14 +103,13 @@ CREATE TABLE opportunities (
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 索引
 CREATE INDEX idx_opportunities_task_id    ON opportunities(task_id);
 CREATE INDEX idx_opportunities_score_total ON opportunities(score_total DESC);
 CREATE INDEX idx_opportunities_created_at  ON opportunities(created_at DESC);
 ```
 
 | 字段 | 类型 | 说明 |
-|------|------|------|
+|-|-|-|
 | id | SERIAL | PK |
 | task_id | INTEGER | FK → tasks.id |
 | title | VARCHAR(300) | 机会标题，15字以内 |
@@ -149,9 +127,61 @@ CREATE INDEX idx_opportunities_created_at  ON opportunities(created_at DESC);
 
 ---
 
+## `notes` — 用户笔记表
+
+```sql
+CREATE TABLE notes (
+    id         SERIAL PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title      VARCHAR(300) NOT NULL,
+    content    TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_notes_user_id ON notes(user_id);
+```
+
+| 字段 | 类型 | 说明 |
+|-|-|-|
+| id | SERIAL | PK |
+| user_id | INTEGER | FK → users.id，CASCADE 删除 |
+| title | VARCHAR(300) | 笔记标题 |
+| content | TEXT | 笔记正文（自由文本） |
+| created_at | TIMESTAMPTZ | 创建时间 |
+
+---
+
+## `user_favorites` — 用户收藏表（多对多）
+
+> ⚠️ Phase 1 引入 `cards` 表后，FK 将从 `opportunity_id` 迁移到 `card_id`。见 [extension_plan.md](./extension_plan.md)。
+
+```sql
+CREATE TABLE user_favorites (
+    id             SERIAL PRIMARY KEY,
+    user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    opportunity_id INTEGER NOT NULL REFERENCES opportunities(id) ON DELETE CASCADE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_user_opportunity UNIQUE (user_id, opportunity_id)
+);
+
+CREATE INDEX idx_user_favorites_user_id        ON user_favorites(user_id);
+CREATE INDEX idx_user_favorites_opportunity_id ON user_favorites(opportunity_id);
+```
+
+| 字段 | 类型 | 说明 |
+|-|-|-|
+| id | SERIAL | PK |
+| user_id | INTEGER | FK → users.id |
+| opportunity_id | INTEGER | FK → opportunities.id |
+| created_at | TIMESTAMPTZ | 收藏时间 |
+
+唯一约束防止同一用户重复收藏；`POST /cards/{id}/favorite` 为幂等接口，已收藏则取消，未收藏则添加。
+
+---
+
 ## 数据样例
 
-### tasks 表样例
+### tasks 表
 ```json
 {
   "id": 1,
@@ -165,7 +195,7 @@ CREATE INDEX idx_opportunities_created_at  ON opportunities(created_at DESC);
 }
 ```
 
-### opportunities 表样例
+### opportunities 表
 ```json
 {
   "id": 1,
@@ -183,21 +213,3 @@ CREATE INDEX idx_opportunities_created_at  ON opportunities(created_at DESC);
   "keywords_matched": ["ai agent", "llm"]
 }
 ```
-
----
-
-## 迁移策略
-
-- **开发环境**：`init_db()` 启动时自动 `CREATE TABLE IF NOT EXISTS`（直接用 SQLAlchemy metadata）
-- **生产环境**：使用 Alembic 管理版本化迁移（MVP 阶段先不用）
-
----
-
-## 存储策略
-
-| 数据类型 | 存储位置 | 原因 |
-|----------|----------|------|
-| 用户/任务/机会 | PostgreSQL | 需要事务、关联查询 |
-| Session/缓存 | Redis | 高速读写，可丢失 |
-| APScheduler Jobs | Redis | 持久化 Job 元数据 |
-| 原始信号数据 | **不持久化** | 每次重新采集，控制存储成本 |

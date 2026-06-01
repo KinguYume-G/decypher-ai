@@ -1,3 +1,5 @@
+# Chat routes: POST /chat/stream pushes LLM tokens to the frontend as SSE; message can reference a task for context.
+# 对话路由：POST /chat/stream 以 SSE 流式推送 LLM 响应；消息可关联任务以注入上下文。
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status

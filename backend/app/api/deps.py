@@ -1,3 +1,5 @@
+# FastAPI dependency functions: get_db() injects AsyncSession, get_current_user() validates Bearer JWT and returns User.
+# FastAPI 依赖函数：get_db() 注入 AsyncSession，get_current_user() 验证 Bearer JWT 并返回当前用户对象。
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select

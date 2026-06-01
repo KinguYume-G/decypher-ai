@@ -1,3 +1,5 @@
+# Task ORM model: stores collection config (keywords, sources, schedule interval) and status machine; owned by User.
+# Task ORM 模型：存储采集配置（关键词、数据源、调度间隔）及状态机；归属于 User。
 import enum
 from datetime import datetime
 

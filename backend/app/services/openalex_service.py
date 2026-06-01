@@ -1,3 +1,5 @@
+# Queries the OpenAlex open-access academic graph API for research works matching task keywords.
+# 查询 OpenAlex 开放学术图谱 API，获取匹配任务关键词的研究成果。
 import logging
 
 import httpx

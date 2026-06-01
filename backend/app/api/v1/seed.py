@@ -1,3 +1,5 @@
+# Seed route: POST /seed creates 5 demo tasks (one per category) and triggers them; skips if tasks already exist.
+# 演示数据路由：POST /seed 为每个分类创建示例任务并触发执行；数据库已有任务时自动跳过。
 """
 一键初始化演示数据：为 5 个模块各创建一个默认任务并立即触发。
 仅在数据库为空时执行（有任务就跳过）。
