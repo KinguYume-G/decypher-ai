@@ -77,6 +77,11 @@ export interface NoteCreate {
   content: string;
 }
 
+export interface NoteUpdate {
+  title?: string;
+  content?: string;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;

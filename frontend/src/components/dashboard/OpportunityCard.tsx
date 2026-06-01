@@ -2,47 +2,40 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Bookmark, BookmarkCheck, RefreshCw, ThumbsUp } from "lucide-react";
+import { ArrowRight, Bookmark, BookmarkCheck, RefreshCw } from "lucide-react";
+import toast from "react-hot-toast";
 import { Badge } from "@/components/ui/Badge";
 import { compactScore, formatDate } from "@/lib/utils";
-import { cardsAPI } from "@/lib/api";
+import { cardsAPI, notesAPI } from "@/lib/api";
 import type { Opportunity, TaskCategory } from "@/types";
 
-const CATEGORY_META: Record<
-  TaskCategory,
-  { label: string; icon: string; color: string }
-> = {
-  startup:  { label: "Startup",        icon: "rocket_launch",     color: "text-violet-400" },
-  market:   { label: "Global Markets", icon: "trending_up",       color: "text-blue-400" },
-  research: { label: "Research",       icon: "science",           color: "text-emerald-400" },
-  stocks:   { label: "Corp. News",     icon: "candlestick_chart", color: "text-amber-400" },
-  jobs:     { label: "Careers",        icon: "work",              color: "text-rose-400" },
+const CATEGORY_META: Record<TaskCategory, { label: string; icon: string; color: string }> = {
+  startup:  { label: "Startup",        icon: "rocket_launch",     color: "text-violet-500" },
+  market:   { label: "Global Markets", icon: "trending_up",       color: "text-blue-500" },
+  research: { label: "Research",       icon: "science",           color: "text-emerald-500" },
+  stocks:   { label: "Corp. News",     icon: "candlestick_chart", color: "text-amber-500" },
+  jobs:     { label: "Careers",        icon: "work",              color: "text-rose-500" },
 };
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
-  index?: number;           // 0-based → 显示为 "01" "02"
+  index?: number;
   selected?: boolean;
   onSelect?: (card: Opportunity) => void;
   onFavoriteToggle?: () => void;
 }
 
 export function OpportunityCard({
-  opportunity,
-  index,
-  selected = false,
-  onSelect,
-  onFavoriteToggle,
+  opportunity, index, selected = false, onSelect, onFavoriteToggle,
 }: OpportunityCardProps) {
-  const [flipped, setFlipped]     = useState(false);
-  const [favorited, setFavorited] = useState(opportunity.is_favorited);
-  const [liked, setLiked]         = useState(false);
-  const [favLoading, setFavLoading] = useState(false);
+  const [flipped, setFlipped]         = useState(false);
+  const [favorited, setFavorited]     = useState(opportunity.is_favorited);
+  const [favLoading, setFavLoading]   = useState(false);
+  const [noteText, setNoteText]       = useState("");
+  const [savingNote, setSavingNote]   = useState(false);
 
-  const catMeta    = CATEGORY_META[opportunity.category] ?? CATEGORY_META.startup;
-  const numLabel   = index !== undefined ? String(index + 1).padStart(2, "0") : null;
-  // Score badge: teal-slate consistent style matching target UI
-  const scoreColor = "bg-slate-700";
+  const catMeta  = CATEGORY_META[opportunity.category] ?? CATEGORY_META.startup;
+  const numLabel = index !== undefined ? String(index + 1).padStart(2, "0") : null;
 
   const handleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -61,116 +54,124 @@ export function OpportunityCard({
     setFlipped((v) => !v);
   };
 
-  const handleLike = (e: React.MouseEvent) => {
+  const handleSaveNote = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setLiked((v) => !v);
+    if (!noteText.trim() || savingNote) return;
+    setSavingNote(true);
+    try {
+      await notesAPI.create({
+        title: opportunity.title,
+        content: noteText.trim(),
+      });
+      toast.success("Note saved");
+      setNoteText("");
+    } catch {
+      toast.error("Failed to save note");
+    } finally {
+      setSavingNote(false);
+    }
   };
 
   return (
-    /* 固定高度容器，提供 3D 透视 */
     <div
       className="relative h-[300px] cursor-pointer"
       style={{ perspective: "1200px" }}
       onClick={() => { if (!flipped) onSelect?.(opportunity); }}
     >
-      {/* 翻转容器 */}
       <div
         className="relative w-full h-full transition-all duration-700"
-        style={{
-          transformStyle: "preserve-3d",
-          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
-        }}
+        style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
       >
-        {/* ── 正面 ─────────────────────────────────────────── */}
+
+        {/* ── Front face ───────────────────────────────────────── */}
         <div
-          className={`absolute inset-0 rounded-2xl p-5 flex flex-col glass-card transition-all ${
-            selected ? "ring-2 ring-violet-400/60 border-violet-400/40" : ""
+          className={`absolute inset-0 rounded-2xl p-5 flex flex-col bg-white border transition-all ${
+            selected ? "border-secondary/60 ring-2 ring-secondary/20 shadow-md shadow-secondary/10" : "border-outline-variant/40 hover:border-outline-variant/70"
           }`}
           style={{ backfaceVisibility: "hidden" }}
         >
-          {/* 顶部：序号 + 分数 */}
+          {/* Row 1: number + score */}
           <div className="flex items-start justify-between mb-3">
             {numLabel && (
-              <span className="font-display-xl text-3xl font-black text-on-surface/20 leading-none select-none">
+              <span className="text-3xl font-black text-on-surface/15 leading-none select-none">
                 {numLabel}
               </span>
             )}
-            <span className={`ml-auto text-xs font-bold text-white px-2 py-0.5 rounded-full ${scoreColor}`}>
+            <span className="ml-auto text-xs font-bold text-white px-2.5 py-0.5 rounded-full bg-slate-700">
               {Math.round(opportunity.score_total * 10)}
             </span>
           </div>
 
-          {/* 标题 */}
-          <h3 className="font-headline-md text-base text-on-surface leading-tight mb-2 line-clamp-2">
+          {/* Title */}
+          <h3 className="text-sm font-bold text-on-surface leading-snug mb-2 line-clamp-2">
             {opportunity.title}
           </h3>
 
-          {/* 摘要 */}
+          {/* Summary */}
           <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-3 flex-1">
             {opportunity.why_it_matters}
           </p>
 
-          {/* 标签 */}
+          {/* Tags */}
           <div className="flex flex-wrap gap-1.5 mt-3">
             {opportunity.keywords_matched.slice(0, 3).map((kw) => (
-              <span key={kw} className="text-[10px] px-2 py-0.5 rounded-full bg-on-surface/5 border border-on-surface/10 text-on-surface-variant">
+              <span key={kw} className="text-[10px] px-2 py-0.5 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant">
                 {kw}
               </span>
             ))}
           </div>
 
-          {/* 底部操作行 */}
-          <div className="flex items-center justify-between mt-4 pt-3 border-t border-on-surface/5">
-            <div className="flex items-center gap-3">
-              {/* 收藏 */}
-              <button onClick={handleFavorite} disabled={favLoading}
-                className="flex items-center gap-1 text-on-surface-variant hover:text-rose-400 transition-colors disabled:opacity-40">
-                {favorited
-                  ? <BookmarkCheck size={14} className="text-rose-400" />
-                  : <Bookmark size={14} />}
-              </button>
-              {/* 点赞 */}
-              <button onClick={handleLike}
-                className={`flex items-center gap-1 transition-colors ${liked ? "text-blue-400" : "text-on-surface-variant hover:text-blue-400"}`}>
-                <ThumbsUp size={14} className={liked ? "fill-blue-400" : ""} />
-              </button>
-            </div>
+          {/* Actions row — favorite only + flip */}
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-outline-variant/15">
+            {/* Favorite */}
+            <button
+              onClick={handleFavorite}
+              disabled={favLoading}
+              className="flex items-center gap-1 text-on-surface-variant hover:text-secondary transition-colors disabled:opacity-40"
+              title={favorited ? "Remove from saved" : "Save"}
+            >
+              {favorited
+                ? <BookmarkCheck size={15} className="text-secondary" />
+                : <Bookmark size={15} />}
+            </button>
 
-            {/* 右侧：模块标签 + 翻转按钮 */}
+            {/* Right side: category label + flip */}
             <div className="flex items-center gap-2">
-              <span className={`text-[10px] font-bold ${catMeta.color} flex items-center gap-1`}>
-                <span className="material-symbols-outlined text-[12px]">{catMeta.icon}</span>
+              <span className={`text-[10px] font-semibold ${catMeta.color} flex items-center gap-1`}>
+                <span className="material-symbols-outlined text-[12px]"
+                  style={{ fontVariationSettings: "'FILL' 1" }}>{catMeta.icon}</span>
                 {catMeta.label}
               </span>
-              <button onClick={handleFlip}
+              <button
+                onClick={handleFlip}
                 className="text-on-surface-variant hover:text-on-surface transition-colors"
-                title="查看详情">
+                title="View full analysis"
+              >
                 <RefreshCw size={13} />
               </button>
             </div>
           </div>
         </div>
 
-        {/* ── 背面（完整 AI 分析内容）──────────────────────── */}
+        {/* ── Back face ────────────────────────────────────────── */}
         <div
-          className="absolute inset-0 rounded-2xl p-5 flex flex-col glass-card overflow-y-auto custom-scrollbar"
+          className="absolute inset-0 rounded-2xl p-5 flex flex-col bg-white border border-outline-variant/40 overflow-y-auto custom-scrollbar"
           style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 背面顶部 */}
+          {/* Back header */}
           <div className="flex items-center justify-between mb-3 shrink-0">
             <span className={`text-[10px] font-bold uppercase tracking-wider ${catMeta.color} flex items-center gap-1`}>
-              <span className="material-symbols-outlined text-[12px]">{catMeta.icon}</span>
+              <span className="material-symbols-outlined text-[12px]"
+                style={{ fontVariationSettings: "'FILL' 1" }}>{catMeta.icon}</span>
               {catMeta.label} · AI Analysis
             </span>
-            <button onClick={handleFlip}
-              className="text-on-surface-variant hover:text-on-surface transition-colors"
-              title="Flip back">
+            <button onClick={handleFlip} className="text-on-surface-variant hover:text-on-surface transition-colors" title="Flip back">
               <RefreshCw size={13} />
             </button>
           </div>
 
-          <h3 className="font-headline-md text-sm text-on-surface font-bold mb-3 shrink-0 line-clamp-2">
+          <h3 className="text-sm font-bold text-on-surface mb-3 shrink-0 line-clamp-2">
             {opportunity.title}
           </h3>
 
@@ -181,7 +182,7 @@ export function OpportunityCard({
 
             {/* Score breakdown */}
             <div>
-              <p className="font-bold text-on-surface/60 uppercase text-[10px] mb-1.5">Score breakdown</p>
+              <p className="font-bold text-on-surface/50 uppercase text-[10px] mb-1.5">Score breakdown</p>
               <div className="grid grid-cols-2 gap-1">
                 <ScoreRow label="Trend"       value={opportunity.score_trend} />
                 <ScoreRow label="Novelty"     value={opportunity.score_novelty} />
@@ -194,26 +195,46 @@ export function OpportunityCard({
             {/* Source signals */}
             {opportunity.source_signals.length > 0 && (
               <div>
-                <p className="font-bold text-on-surface/60 uppercase text-[10px] mb-1.5">Sources</p>
-                <div className="space-y-1">
-                  {opportunity.source_signals.slice(0, 4).map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                      className="block text-violet-400 hover:underline truncate text-[10px]">
-                      {url}
-                    </a>
-                  ))}
-                </div>
+                <p className="font-bold text-on-surface/50 uppercase text-[10px] mb-1.5">Sources</p>
+                {opportunity.source_signals.slice(0, 3).map((url, i) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                    className="block text-secondary hover:underline truncate text-[10px] mb-0.5">
+                    {url}
+                  </a>
+                ))}
               </div>
             )}
           </div>
 
-          {/* Deep dive link */}
+          {/* Quick note input */}
+          <div className="shrink-0 mt-3 pt-3 border-t border-outline-variant/20" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">Quick note</p>
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveNote(e as unknown as React.MouseEvent); }}
+                placeholder="Add your insight…"
+                className="flex-1 text-[10px] px-2 py-1.5 rounded-lg border border-outline-variant/40 bg-surface-container-low outline-none focus:border-secondary/50 text-on-surface placeholder:text-outline"
+              />
+              <button
+                onClick={handleSaveNote}
+                disabled={!noteText.trim() || savingNote}
+                className="text-[10px] px-2.5 py-1.5 rounded-lg bg-secondary text-white font-semibold disabled:opacity-40 transition-colors hover:bg-secondary/90 shrink-0"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+
+          {/* Deep dive */}
           <Link
             href={`/chat?opportunityId=${opportunity.id}`}
-            className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-violet-500/10 border border-violet-400/20 px-3 py-2 text-xs font-semibold text-violet-400 hover:bg-violet-500/20 transition-colors shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            className="mt-2.5 flex items-center justify-center gap-2 rounded-xl bg-secondary/8 border border-secondary/20 px-3 py-2 text-xs font-semibold text-secondary hover:bg-secondary/12 transition-colors shrink-0"
           >
-            Deep dive with AI
-            <ArrowRight size={12} />
+            Deep dive with AI <ArrowRight size={12} />
           </Link>
         </div>
       </div>
@@ -225,7 +246,7 @@ function Section({ label, content }: { label: string; content: string }) {
   if (!content) return null;
   return (
     <div>
-      <p className="font-bold text-on-surface/60 uppercase text-[10px] mb-1">{label}</p>
+      <p className="font-bold text-on-surface/50 uppercase text-[10px] mb-1">{label}</p>
       <p className="leading-relaxed line-clamp-3">{content}</p>
     </div>
   );
@@ -233,12 +254,12 @@ function Section({ label, content }: { label: string; content: string }) {
 
 function ScoreRow({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
   const color = warn
-    ? value <= 4 ? "text-emerald-400" : value <= 7 ? "text-amber-400" : "text-rose-400"
-    : value >= 8 ? "text-emerald-400" : value >= 6 ? "text-blue-400" : "text-amber-400";
+    ? value <= 4 ? "text-emerald-500" : value <= 7 ? "text-amber-500" : "text-rose-500"
+    : value >= 8 ? "text-emerald-500" : value >= 6 ? "text-blue-500"    : "text-amber-500";
   return (
     <div className="flex items-center justify-between">
-      <span className="text-on-surface/50">{label}</span>
-      <span className={`font-bold ${color}`}>{value.toFixed(1)}</span>
+      <span className="text-on-surface/40">{label}</span>
+      <span className={`font-bold text-[11px] ${color}`}>{value.toFixed(1)}</span>
     </div>
   );
 }

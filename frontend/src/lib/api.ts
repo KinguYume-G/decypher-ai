@@ -5,6 +5,7 @@ import type {
   ChatResponse,
   Note,
   NoteCreate,
+  NoteUpdate,
   Opportunity,
   Task,
   TaskCategory,
@@ -67,7 +68,7 @@ export const opportunityAPI = {
 };
 
 export const cardsAPI = {
-  list: (params?: { category?: TaskCategory | null; limit?: number }) =>
+  list: (params?: { category?: TaskCategory | null; limit?: number; favorited?: boolean }) =>
     http.get<APIResponse<Opportunity[]>>("/api/v1/cards", { params }),
   toggleFavorite: (id: number) =>
     http.post<APIResponse<{ is_favorited: boolean }>>(`/api/v1/cards/${id}/favorite`),
@@ -78,9 +79,10 @@ export const seedAPI = {
 };
 
 export const notesAPI = {
-  list: () => http.get<APIResponse<Note[]>>("/api/v1/notes"),
-  create: (data: NoteCreate) => http.post<APIResponse<Note>>("/api/v1/notes", data),
-  delete: (id: number) => http.delete<APIResponse<null>>(`/api/v1/notes/${id}`),
+  list:   ()                        => http.get<APIResponse<Note[]>>("/api/v1/notes"),
+  create: (data: NoteCreate)        => http.post<APIResponse<Note>>("/api/v1/notes", data),
+  update: (id: number, data: NoteUpdate) => http.patch<APIResponse<Note>>(`/api/v1/notes/${id}`, data),
+  delete: (id: number)              => http.delete<APIResponse<null>>(`/api/v1/notes/${id}`),
 };
 
 export const chatAPI = {

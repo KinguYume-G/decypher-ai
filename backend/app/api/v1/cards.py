@@ -32,15 +32,17 @@ def _build_out(opp: Opportunity, fav_ids: set[int]) -> OpportunityOut:
 async def list_cards(
     category: str | None = None,
     limit: int = Query(default=6, ge=1, le=50),
+    favorited: bool | None = None,   # True → only saved cards; None/False → all
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """按模块分类返回机会卡片，供 Dashboard Tab 使用。"""
     if category is not None and category not in VALID_CATEGORIES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"无效分类: {category}",
+            detail=f"Invalid category: {category}",
         )
+
+    fav_ids = await _favorited_ids(db, current_user.id)
 
     query = (
         select(Opportunity)
@@ -51,10 +53,12 @@ async def list_cards(
     )
     if category is not None:
         query = query.where(Opportunity.category == category)
+    if favorited is True:
+        # Only return cards that the user has explicitly saved
+        query = query.where(Opportunity.id.in_(fav_ids))
 
     result = await db.execute(query)
     cards = result.scalars().all()
-    fav_ids = await _favorited_ids(db, current_user.id)
     return APIResponse(
         success=True,
         data=[_build_out(c, fav_ids) for c in cards],

@@ -5,10 +5,12 @@ import { Search } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import AIAnalystPanel from "@/components/layout/AIAnalystPanel";
 import { OpportunityCard } from "@/components/dashboard/OpportunityCard";
+import { CreateTaskModal } from "@/components/dashboard/CreateTaskModal";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { UpgradePromptModal } from "@/components/dashboard/UpgradePromptModal";
 import { cardsAPI } from "@/lib/api";
 import { useDashboardStore } from "@/store";
+import { useTasks } from "@/hooks/useTasks";
 import type { Opportunity, TaskCategory } from "@/types";
 
 const MODULES: { id: TaskCategory | null; label: string }[] = [
@@ -22,6 +24,7 @@ const MODULES: { id: TaskCategory | null; label: string }[] = [
 
 export default function DashboardPage() {
   const { selectedCard, activeModule, setSelectedCard, setActiveModule } = useDashboardStore();
+  const { createTask } = useTasks();
 
   const [cards, setCards]               = useState<Opportunity[]>([]);
   const [cardsLoading, setCardsLoading] = useState(true);
@@ -119,16 +122,14 @@ export default function DashboardPage() {
         <main className="flex-1 px-6 py-6">
 
           {/* Section header */}
-          <div className="flex items-baseline justify-between mb-5">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h1 className="text-xl font-bold text-on-surface">
-                Intelligence Insights
-              </h1>
+              <h1 className="text-xl font-bold text-on-surface">Intelligence Insights</h1>
               <p className="text-xs text-on-surface-variant mt-0.5">
-                Showing {displayed.length} curated signals
-                {activeModule ? ` · ${activeLabel}` : ""}
+                Showing {displayed.length} curated signals{activeModule ? ` · ${activeLabel}` : ""}
               </p>
             </div>
+            <CreateTaskModal onCreate={createTask} />
           </div>
 
           {/* Card grid */}

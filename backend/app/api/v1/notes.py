@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.models.note import Note
 from app.models.user import User
-from app.schemas import APIResponse, NoteCreate, NoteOut
+from app.schemas import APIResponse, NoteCreate, NoteOut, NoteUpdate
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 
@@ -32,6 +32,28 @@ async def create_note(
 ):
     note = Note(user_id=current_user.id, title=body.title, content=body.content)
     db.add(note)
+    await db.commit()
+    await db.refresh(note)
+    return APIResponse(success=True, data=NoteOut.model_validate(note))
+
+
+@router.patch("/{note_id}", response_model=APIResponse[NoteOut])
+async def update_note(
+    note_id: int,
+    body: NoteUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Note).where(Note.id == note_id, Note.user_id == current_user.id)
+    )
+    note = result.scalar_one_or_none()
+    if note is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+    if body.title is not None:
+        note.title = body.title
+    if body.content is not None:
+        note.content = body.content
     await db.commit()
     await db.refresh(note)
     return APIResponse(success=True, data=NoteOut.model_validate(note))
