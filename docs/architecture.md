@@ -267,7 +267,7 @@ src/
 ## 架构演进计划
 
 | 阶段 | 触发条件 | 主要变更 |
-|------|---------|---------|
+|-|-|-|
 | **MVP（当前）** | — | 单体 FastAPI + APScheduler + PostgreSQL + Redis |
 | **Phase 2** | 并发任务 > 10 | 拆出独立 Worker 服务，引入 Celery + Redis Queue |
 | **Phase 3** | 日活 > 1000 | 事件驱动：Kafka 消息队列 + 独立 AI 微服务 |
@@ -278,7 +278,7 @@ src/
 ## 技术选型决策记录（ADR）
 
 | 决策 | 选择 | 原因 |
-|------|------|------|
+|-|-|-|
 | 定时任务 | APScheduler（非 Celery） | MVP 任务量小，零额外服务依赖 |
 | 关系数据库 | PostgreSQL（非 MongoDB） | 数据有明确关系（User→Task→Opportunity），需要事务 |
 | AI 流式输出 | SSE（非 WebSocket） | 聊天流单向推送，SSE 维护状态更简单 |

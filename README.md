@@ -61,7 +61,8 @@ graph TD
 | [docs/status.md](docs/status.md) | 当前实现状态、功能缺口、技术债务 |
 | [docs/roadmap.md](docs/roadmap.md) | 分阶段开发计划（Phase 1~4）+ 实现规格 |
 | [docs/architecture.md](docs/architecture.md) | 系统架构、模块职责、层间调用关系 |
-| [docs/api-design.md](docs/api-design.md) | API 端点、请求/响应格式、状态码规范 |
+| [docs/api/conventions.md](docs/api/conventions.md) | API 全局约定：响应格式、状态码、认证、命名 |
+| [docs/api/](docs/api/) | 各资源接口文档（auth / tasks / opportunities / cards / chat / notes / system） |
 | [docs/database/overview.md](docs/database/overview.md) | 数据库概览、ERD、迁移策略 |
 | [docs/database/current_schema.md](docs/database/current_schema.md) | 当前表结构定义 + 数据样例 |
 | [docs/database/extension_plan.md](docs/database/extension_plan.md) | Phase 1~3 规划中的新表 |
@@ -75,7 +76,7 @@ graph TD
 | 角色 | 阅读路径 |
 |-|-|
 | **新成员 / 初次了解项目** | [product](docs/product.md) → [architecture](docs/architecture.md) → [status](docs/status.md) → [roadmap](docs/roadmap.md) |
-| **接手某个功能开发** | [status](docs/status.md)（确认缺口）→ [roadmap](docs/roadmap.md)（实现规格）→ [api-design](docs/api-design.md) / [database](docs/database/overview.md) |
+| **接手某个功能开发** | [status](docs/status.md)（确认缺口）→ [roadmap](docs/roadmap.md)（实现规格）→ [docs/api/](docs/api/) / [database](docs/database/overview.md) |
 | **AI 编程助手（Claude Code）** | 见 `CLAUDE.md`（已自动加载） |
 
 ---
