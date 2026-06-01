@@ -1,3 +1,5 @@
+# Scrapes the Remote OK JSON endpoint for remote tech job listings matching task keywords.
+# 抓取 Remote OK JSON 接口，获取匹配任务关键词的远程科技职位信息。
 import logging
 
 import httpx

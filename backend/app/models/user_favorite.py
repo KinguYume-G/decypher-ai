@@ -1,3 +1,5 @@
+# UserFavorite ORM model: many-to-many join between User and Opportunity; unique constraint prevents duplicate saves.
+# UserFavorite ORM 模型：User 与 Opportunity 的多对多收藏关联表；唯一约束防止重复收藏。
 from datetime import datetime
 
 from sqlalchemy import ForeignKey, UniqueConstraint, func

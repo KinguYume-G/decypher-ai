@@ -1,3 +1,5 @@
+# User ORM model: stores credentials (email, hashed_password) and account flags; one-to-many with Task and Note.
+# User ORM 模型：存储邮箱、哈希密码及账号状态；与 Task 和 Note 形成一对多关系。
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, String, func

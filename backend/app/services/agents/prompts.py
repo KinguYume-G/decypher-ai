@@ -1,3 +1,5 @@
+# Per-category LLM system prompt templates and JSON output schema; consumed by analysis_service via get_system_prompt().
+# 各分类的 LLM 系统提示词模板及 JSON 输出 Schema；由 analysis_service 通过 get_system_prompt() 引用。
 """
 每个模块的专用 System Prompt。
 公共约束：只输出 JSON，不写 markdown 代码块，不写买卖建议（股市模块）。

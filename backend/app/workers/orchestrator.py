@@ -1,3 +1,5 @@
+# Pipeline layer 3: calls collector → processor → analysis_service, writes Opportunities to DB, updates Task status.
+# Pipeline 第三层：调用 collector → processor → analysis_service，将 Opportunity 写入数据库并更新 Task 状态。
 import logging
 from datetime import datetime, timezone
 

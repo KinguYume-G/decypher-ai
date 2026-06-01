@@ -1,3 +1,5 @@
+# Async SQLAlchemy engine + session factory; exposes get_db() dependency and init_db() for table creation on startup.
+# 异步 SQLAlchemy 引擎与 Session 工厂；暴露 get_db() 依赖注入函数和 init_db() 建表函数。
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 

@@ -1,3 +1,5 @@
+# Generic async RSS/Atom feed parser (RSS 2.0 + Atom 1.0); instantiated once per feed URL, no feedparser dependency.
+# 通用异步 RSS/Atom 解析器（支持 RSS 2.0 和 Atom 1.0）；每个 feed URL 实例化一次，无需 feedparser 依赖。
 """
 通用 RSS / Atom 采集器。
 支持 RSS 2.0 和 Atom 1.0，用 httpx + ElementTree 解析，无需 feedparser 依赖。

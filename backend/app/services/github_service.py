@@ -1,3 +1,5 @@
+# Searches GitHub trending repos and issues via the authenticated REST API (5000 req/hr with token).
+# 通过 GitHub 认证 REST API 搜索热门仓库和 Issue（带 Token 可达 5000 次/小时）。
 import logging
 
 import httpx

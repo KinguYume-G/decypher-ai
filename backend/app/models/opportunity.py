@@ -1,3 +1,5 @@
+# Opportunity ORM model: one AI-analysed result linked to a Task, holding 5-dimension scores and generated text.
+# Opportunity ORM 模型：关联 Task 的一条 AI 分析结果，包含 5 维评分和生成的结构化文本字段。
 from datetime import datetime
 
 from sqlalchemy import Float, ForeignKey, Index, String, Text, func

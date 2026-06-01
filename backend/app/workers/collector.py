@@ -1,3 +1,5 @@
+# Pipeline layer 1: fans out to all configured data-source services concurrently and returns a flat list of RawSignals.
+# Pipeline 第一层：并发调用所有配置的数据源 Service，汇总返回 RawSignal 列表。
 import asyncio
 import logging
 

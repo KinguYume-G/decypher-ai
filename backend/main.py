@@ -1,3 +1,5 @@
+# FastAPI app entry point: registers all routers, runs init_db() and starts APScheduler on startup.
+# FastAPI 应用入口：注册所有路由，启动时执行 init_db() 建表并启动 APScheduler 定时调度器。
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI

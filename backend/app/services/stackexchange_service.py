@@ -1,3 +1,5 @@
+# Searches Stack Overflow/Exchange questions via the Stack Exchange API.
+# 通过 Stack Exchange API 搜索 Stack Overflow 及相关社区的问题。
 import logging
 
 import httpx

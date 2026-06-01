@@ -1,3 +1,5 @@
+# Queries SEC EDGAR full-text search for recent regulatory filings matching task keywords.
+# 查询 SEC EDGAR 全文搜索接口，获取匹配任务关键词的最新监管文件。
 import logging
 from datetime import datetime, timedelta, timezone
 

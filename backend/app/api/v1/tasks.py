@@ -1,3 +1,5 @@
+# Tasks routes: CRUD for scheduled data-collection tasks + POST /{id}/run to manually trigger the analysis pipeline.
+# 任务路由：定时采集任务的增删改查，以及 POST /{id}/run 手动触发分析 Pipeline。
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

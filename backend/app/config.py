@@ -1,3 +1,5 @@
+# Pydantic-settings Settings class: maps all DECYPHER_* env vars into typed fields used across the entire app.
+# Pydantic-settings 配置类：将所有 DECYPHER_* 环境变量映射为类型安全的字段，全项目通过 settings 引用。
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

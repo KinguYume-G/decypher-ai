@@ -1,3 +1,5 @@
+# APScheduler AsyncIOScheduler with Redis JobStore; exposes helpers to add, remove, and pause task jobs.
+# APScheduler 异步调度器，使用 Redis 持久化 Job；暴露任务 Job 的增删暂停辅助函数。
 from urllib.parse import urlparse
 
 from apscheduler.jobstores.redis import RedisJobStore

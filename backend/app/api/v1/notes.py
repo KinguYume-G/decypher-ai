@@ -1,3 +1,5 @@
+# Notes routes: full CRUD (list, create, PATCH update, delete) for user-owned freetext notes.
+# 笔记路由：用户自由文本笔记的增删改查（list / create / PATCH / delete）。
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession

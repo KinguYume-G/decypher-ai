@@ -1,3 +1,5 @@
+# Auth routes: POST /register (creates user + returns JWT), POST /login, GET /me.
+# 认证路由：POST /register 注册并返回 JWT，POST /login 登录，GET /me 获取当前登录用户。
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

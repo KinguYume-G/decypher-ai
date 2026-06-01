@@ -1,3 +1,5 @@
+# Queries the Product Hunt GraphQL API for recently launched products matching task keywords.
+# 查询 Product Hunt GraphQL API，获取与任务关键词匹配的最新产品发布。
 import logging
 
 import httpx

@@ -1,3 +1,5 @@
+# Fetches academic paper abstracts from the arXiv API filtered by search query.
+# 调用 arXiv API，按搜索关键词获取学术论文摘要。
 import logging
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone

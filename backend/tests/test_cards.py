@@ -1,3 +1,5 @@
+# Tests for GET /cards (list + category filter) and POST /cards/{id}/favorite (toggle).
+# 测试 GET /cards（列表 + 分类过滤）及 POST /cards/{id}/favorite（切换收藏）。
 from unittest.mock import patch
 
 import pytest

@@ -1,3 +1,5 @@
+# Cards routes: GET /cards (browse opportunities by category with favorite flag), POST /cards/{id}/favorite (toggle).
+# 卡片路由：GET /cards 按分类浏览机会卡片（附收藏状态），POST /cards/{id}/favorite 幂等切换收藏。
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import delete, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession

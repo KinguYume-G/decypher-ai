@@ -1,3 +1,5 @@
+# Fetches AI/ML paper metadata from the Semantic Scholar API; includes titles, abstracts, and citation counts.
+# 调用 Semantic Scholar API 获取 AI/ML 论文元数据，包含标题、摘要和引用数。
 import logging
 
 import httpx

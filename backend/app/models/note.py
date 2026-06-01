@@ -1,3 +1,5 @@
+# Note ORM model: user-owned freetext note (title + content) that cascades on user delete.
+# Note ORM 模型：用户自有自由文本笔记（标题 + 正文），随用户删除级联删除。
 from datetime import datetime
 
 from sqlalchemy import ForeignKey, String, Text, func
