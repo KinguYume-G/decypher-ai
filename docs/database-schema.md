@@ -14,9 +14,11 @@
 ```
 users
   │
-  │ 1:N
-  ▼
-tasks ──── 1:N ──→ opportunities
+  ├── 1:N ──→ tasks ──── 1:N ──→ opportunities
+  │                                    │
+  ├── 1:N ──→ notes                    │ N:M
+  │                                    ▼
+  └────────────────────── user_favorites
 ```
 
 ---
@@ -43,7 +45,7 @@ CREATE INDEX idx_users_username ON users(username);
 ```
 
 | 字段 | 类型 | 约束 | 说明 |
-|------|------|------|------|
+|-|-|-|-|
 | id | SERIAL | PK | 自增主键 |
 | email | VARCHAR(255) | UNIQUE, NOT NULL | 登录邮箱 |
 | username | VARCHAR(100) | UNIQUE, NOT NULL | 显示名称 |
@@ -80,7 +82,7 @@ CREATE INDEX idx_tasks_status  ON tasks(status);
 ```
 
 | 字段 | 类型 | 说明 |
-|------|------|------|
+|-|-|-|
 | id | SERIAL | PK |
 | user_id | INTEGER | FK → users.id，CASCADE 删除 |
 | name | VARCHAR(200) | 任务名称，用户自定义 |
@@ -131,7 +133,7 @@ CREATE INDEX idx_opportunities_created_at  ON opportunities(created_at DESC);
 ```
 
 | 字段 | 类型 | 说明 |
-|------|------|------|
+|-|-|-|
 | id | SERIAL | PK |
 | task_id | INTEGER | FK → tasks.id |
 | title | VARCHAR(300) | 机会标题，15字以内 |
@@ -186,6 +188,56 @@ CREATE INDEX idx_opportunities_created_at  ON opportunities(created_at DESC);
 
 ---
 
+### `notes` — 用户笔记表
+
+```sql
+CREATE TABLE notes (
+    id         SERIAL PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title      VARCHAR(300) NOT NULL,
+    content    TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_notes_user_id ON notes(user_id);
+```
+
+| 字段 | 类型 | 说明 |
+|-|-|-|
+| id | SERIAL | PK |
+| user_id | INTEGER | FK → users.id，CASCADE 删除 |
+| title | VARCHAR(300) | 笔记标题 |
+| content | TEXT | 笔记正文（自由文本） |
+| created_at | TIMESTAMPTZ | 创建时间 |
+
+---
+
+### `user_favorites` — 用户收藏表（多对多）
+
+```sql
+CREATE TABLE user_favorites (
+    id             SERIAL PRIMARY KEY,
+    user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    opportunity_id INTEGER NOT NULL REFERENCES opportunities(id) ON DELETE CASCADE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_user_opportunity UNIQUE (user_id, opportunity_id)
+);
+
+CREATE INDEX idx_user_favorites_user_id        ON user_favorites(user_id);
+CREATE INDEX idx_user_favorites_opportunity_id ON user_favorites(opportunity_id);
+```
+
+| 字段 | 类型 | 说明 |
+|-|-|-|
+| id | SERIAL | PK |
+| user_id | INTEGER | FK → users.id |
+| opportunity_id | INTEGER | FK → opportunities.id |
+| created_at | TIMESTAMPTZ | 收藏时间 |
+
+唯一约束 `uq_user_opportunity` 防止同一用户重复收藏同一机会；`POST /cards/{id}/favorite` 为幂等接口，已收藏则取消，未收藏则添加。
+
+---
+
 ## 迁移策略
 
 - **开发环境**：`init_db()` 启动时自动 `CREATE TABLE IF NOT EXISTS`（直接用 SQLAlchemy metadata）
@@ -196,7 +248,7 @@ CREATE INDEX idx_opportunities_created_at  ON opportunities(created_at DESC);
 ## 存储策略
 
 | 数据类型 | 存储位置 | 原因 |
-|----------|----------|------|
+|-|-|-|
 | 用户/任务/机会 | PostgreSQL | 需要事务、关联查询 |
 | Session/缓存 | Redis | 高速读写，可丢失 |
 | APScheduler Jobs | Redis | 持久化 Job 元数据 |

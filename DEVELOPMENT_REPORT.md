@@ -1,135 +1,135 @@
-    # Decypher AI — 产品理解与开发方案
+# Decypher AI — 产品理解与开发方案
 
-    > **文档性质**：完整的产品认知 + 现有代码审查 + 缺口分析 + 分阶段开发路线图  
-    > **编写时间**：2026-06-01  
-    > **读者**：Decypher AI 开发团队
+> **文档性质**：完整的产品认知 + 现有代码审查 + 缺口分析 + 分阶段开发路线图  
+> **编写时间**：2026-06-01  
+> **读者**：Decypher AI 开发团队
 
-    ---
+---
 
-    ## 一、产品定位（我们在做什么）
+## 一、产品定位（我们在做什么）
 
-    Decypher AI 是一款 **AI 驱动的科技情报决策平台**，目标用户是科技创始人、投资人和研究人员。
+Decypher AI 是一款 **AI 驱动的科技情报决策平台**，目标用户是科技创始人、投资人和研究人员。
 
-    它不是新闻聚合器，也不是聊天机器人，而是一个**闭环情报引擎**：
+它不是新闻聚合器，也不是聊天机器人，而是一个**闭环情报引擎**：
 
-    ```
-    公开数据源 → AI 采集清洗 → LLM 分析评分 → 信息卡片 Dashboard
-    → 用户点击反馈 → AI 深度解读 → 生成报告/笔记 → 系统记住用户偏好
-    ```
+```
+公开数据源 → AI 采集清洗 → LLM 分析评分 → 信息卡片 Dashboard
+→ 用户点击反馈 → AI 深度解读 → 生成报告/笔记 → 系统记住用户偏好
+```
 
-    ### 核心价值主张
+### 核心价值主张
 
-    | 传统工具                         | Decypher AI                |
-    | -------------------------------- | -------------------------- |
-    | 手动看新闻、筛信息               | 自动抓取 + AI 归因         |
-    | 分散工具（论文/新闻/财报各一套） | 五模块统一平台             |
-    | 普通聊天 AI                      | 基于当前信号的上下文分析师 |
-    | 静态仪表板                       | 用户行为反馈的自适应推荐   |
+| 传统工具 | Decypher AI |
+| - | - |
+| 手动看新闻、筛信息 | 自动抓取 + AI 归因 |
+| 分散工具（论文/新闻/财报各一套） | 五模块统一平台 |
+| 普通聊天 AI | 基于当前信号的上下文分析师 |
+| 静态仪表板 | 用户行为反馈的自适应推荐 |
 
-    ---
+---
 
-    ## 二、五大核心模块
+## 二、五大核心模块
 
-    每个模块共用底层同一套数据管道，只是**信号来源和 Prompt 侧重不同**。
+每个模块共用底层同一套数据管道，只是**信号来源和 Prompt 侧重不同**。
 
-    | 模块         | 核心数据源                                   | AI 分析重点                                             |
-    | ------------ | -------------------------------------------- | ------------------------------------------------------- |
-    | **商业市场** | Product Hunt、HN、公司 Blog、GitHub 热门项目 | 行业动态、产品发布、市场机会、竞品分析                  |
-    | **学术研究** | arXiv、OpenAlex、Crossref、GitHub            | 论文总结、研究趋势、paper-to-project 建议               |
-    | **创业机会** | GitHub Show HN、Product Hunt、DEV.to         | 市场机会评分、MVP 建议、商业模式、竞品                  |
-    | **股市动态** | SEC EDGAR、公司 IR、GDELT 新闻               | 财报摘要、AI 业务信号、新闻情绪（仅研究，不写买卖建议） |
-    | **求职热点** | Stack Exchange、GitHub Jobs、HN Hiring       | 技能需求、岗位趋势、学习路线推荐                        |
+| 模块 | 核心数据源 | AI 分析重点 |
+| - | - | - |
+| **商业市场** | Product Hunt、HN、公司 Blog、GitHub 热门项目 | 行业动态、产品发布、市场机会、竞品分析 |
+| **学术研究** | arXiv、OpenAlex、Crossref、GitHub | 论文总结、研究趋势、paper-to-project 建议 |
+| **创业机会** | GitHub Show HN、Product Hunt、DEV.to | 市场机会评分、MVP 建议、商业模式、竞品 |
+| **股市动态** | SEC EDGAR、公司 IR、GDELT 新闻 | 财报摘要、AI 业务信号、新闻情绪（仅研究，不写买卖建议） |
+| **求职热点** | Stack Exchange、GitHub Jobs、HN Hiring | 技能需求、岗位趋势、学习路线推荐 |
 
-    **同一条数据可跨模块使用**：`LangGraph 热度上升` → 同时出现在商业市场、学术研究、创业机会和求职热点。
+**同一条数据可跨模块使用**：`LangGraph 热度上升` → 同时出现在商业市场、学术研究、创业机会和求职热点。
 
-    ---
+---
 
-    ## 三、系统架构总图
+## 三、系统架构总图
 
-    ```
-    ┌─────────────────────────────────────────────────────────┐
-    │                      用户浏览器                           │
-    │   左侧导航    │    中间卡片 Bento Grid    │   右侧 AI Analyst  │
-    └─────────────────────────────────────────────────────────┘
-                            │ REST API
-    ┌─────────────────────────────────────────────────────────┐
-    │                   FastAPI Backend (ASGI)                  │
-    │  /api/v1/auth  /api/v1/tasks  /api/v1/opportunities      │
-    │  /api/v1/cards  /api/v1/chat  /api/v1/reports            │
-    └──────────┬────────────────────────┬─────────────────────┘
-            │                        │
-        ┌──────▼──────┐        ┌────────▼──────────┐
-        │  AI Pipeline │        │  APScheduler Jobs  │
-        │             │        │  (Redis JobStore)  │
-        │ Orchestrator│        │  每 6h/12h/每天    │
-        │ Collector   │        └───────────────────┘
-        │ Processor   │
-        │ LLM Client  │
-        │ Agents      │
-        └──────┬──────┘
-            │
-        ┌──────▼──────────────────────────────────────────────┐
-        │                  外部数据源                            │
-        │ GitHub API │ HN API │ arXiv │ OpenAlex │ SEC EDGAR  │
-        │ Product Hunt │ Stack Exchange │ DEV.to │ GDELT      │
-        └─────────────────────────────────────────────────────┘
-            │
-        ┌──────▼──────────────────────────────────────────────┐
-        │                    数据库层                           │
-        │  PostgreSQL 15 (主数据库)    Redis 7 (任务调度)       │
-        │  items | cards | entities | embeddings | reports    │
-        └─────────────────────────────────────────────────────┘
-    ```
+```
+┌─────────────────────────────────────────────────────────┐
+│                      用户浏览器                          │
+│  左侧导航   │   中间卡片 Bento Grid   │  右侧 AI Analyst  │
+└─────────────────────────────────────────────────────────┘
+                        │ REST API
+┌─────────────────────────────────────────────────────────┐
+│                   FastAPI Backend (ASGI)                │
+│  /api/v1/auth  /api/v1/tasks  /api/v1/opportunities     │
+│  /api/v1/cards  /api/v1/chat  /api/v1/reports           │
+└──────────┬────────────────────────┬─────────────────────┘
+           │                        │
+    ┌──────▼──────┐        ┌────────▼──────────┐
+    │ AI Pipeline │        │  APScheduler Jobs │
+    │             │        │  (Redis JobStore) │
+    │ Orchestrator│        │  每 6h/12h/每天    │
+    │ Collector   │        └───────────────────┘
+    │ Processor   │
+    │ LLM Client  │
+    │ Agents      │
+    └──────┬──────┘
+           │
+    ┌──────▼──────────────────────────────────────────────┐
+    │                  外部数据源                          │
+    │ GitHub API │ HN API │ arXiv │ OpenAlex │ SEC EDGAR  │
+    │ Product Hunt │ Stack Exchange │ DEV.to │ GDELT      │
+    └─────────────────────────────────────────────────────┘
+           │
+    ┌──────▼──────────────────────────────────────────────┐
+    │                    数据库层                          │
+    │  PostgreSQL 15 (主数据库)    Redis 7 (任务调度)       │
+    │  items | cards | entities | embeddings | reports    │
+    └─────────────────────────────────────────────────────┘
+```
 
-    ---
+---
 
-    ## 四、现有代码盘点（已实现的部分）
+## 四、现有代码盘点（已实现的部分）
 
-    通过完整读取所有源代码，目前已实现：
+通过完整读取所有源代码，目前已实现：
 
-    ### ✅ 已完成（可用）
+### ✅ 已完成（可用）
 
-    #### Backend
+#### Backend
 
-    | 模块                 | 文件                               | 状态                                |
-    | -------------------- | ---------------------------------- | ----------------------------------- |
-    | FastAPI ASGI 入口    | `backend/main.py`                  | ✅ 完整                             |
-    | 多 AI 供应商配置     | `app/config.py`                    | ✅ 支持 ollama/openai/deepseek      |
-    | JWT 认证             | `app/core/security.py`             | ✅ HS256, 7天有效期                 |
-    | APScheduler + Redis  | `app/core/scheduler.py`            | ✅ IntervalTrigger                  |
-| 用户注册/登录 API    | `app/api/v1/auth.py`               | ✅ 完整                             |
-| 任务 CRUD + 手动触发 | `app/api/v1/tasks.py`              | ✅ 完整                             |
-| 机会列表/详情 API    | `app/api/v1/opportunities.py`      | ✅ 完整                             |
-| Chat 消息 API        | `app/api/v1/chat.py`               | ✅ 完整                             |
-| 数据库模型           | `app/models/`                      | ✅ User + Task + Opportunity        |
-| GitHub 采集器        | `app/services/github_service.py`   | ✅ issues + repos                   |
-| HackerNews 采集器    | `app/services/hn_service.py`       | ✅ Algolia API                      |
-| Reddit 采集器        | `app/services/reddit_service.py`   | ⚠️ Stub（框架存在，无实际抓取逻辑） |
-| 采集编排             | `app/workers/collector.py`         | ✅ 并发抓取                         |
-| 数据清洗             | `app/workers/processor.py`         | ✅ 文本清洗+格式化                  |
-| 流水线编排           | `app/workers/orchestrator.py`      | ✅ 状态机                           |
-| LLM 统一客户端       | `app/services/llm_client.py`       | ✅ OpenAI-compatible                |
-| 创业机会分析         | `app/services/analysis_service.py` | ✅ JSON 结构化提取                  |
-| 聊天分析             | `app/services/chat_service.py`     | ✅ 带 fallback                      |
-| Pydantic Schemas     | `app/schemas/__init__.py`          | ✅ 完整类型定义                     |
+| 模块 | 文件 | 状态 |
+| - | - | - |
+| FastAPI ASGI 入口 | `backend/main.py` | ✅ 完整 |
+| 多 AI 供应商配置 | `app/config.py` | ✅ 支持 ollama/openai/deepseek |
+| JWT 认证 | `app/core/security.py` | ✅ HS256, 7天有效期 |
+| APScheduler + Redis | `app/core/scheduler.py` | ✅ IntervalTrigger |
+| 用户注册/登录 API | `app/api/v1/auth.py` | ✅ 完整 |
+| 任务 CRUD + 手动触发 | `app/api/v1/tasks.py` | ✅ 完整 |
+| 机会列表/详情 API | `app/api/v1/opportunities.py` | ✅ 完整 |
+| Chat 消息 API | `app/api/v1/chat.py` | ✅ 完整 |
+| 数据库模型 | `app/models/` | ✅ User + Task + Opportunity |
+| GitHub 采集器 | `app/services/github_service.py` | ✅ issues + repos |
+| HackerNews 采集器 | `app/services/hn_service.py` | ✅ Algolia API |
+| Reddit 采集器 | `app/services/reddit_service.py` | ⚠️ Stub（框架存在，无实际抓取逻辑） |
+| 采集编排 | `app/workers/collector.py` | ✅ 并发抓取 |
+| 数据清洗 | `app/workers/processor.py` | ✅ 文本清洗+格式化 |
+| 流水线编排 | `app/workers/orchestrator.py` | ✅ 状态机 |
+| LLM 统一客户端 | `app/services/llm_client.py` | ✅ OpenAI-compatible |
+| 创业机会分析 | `app/services/analysis_service.py` | ✅ JSON 结构化提取 |
+| 聊天分析 | `app/services/chat_service.py` | ✅ 带 fallback |
+| Pydantic Schemas | `app/schemas/__init__.py` | ✅ 完整类型定义 |
 
 #### Frontend
 
-| 模块                  | 文件                                 | 状态                                         |
-| --------------------- | ------------------------------------ | -------------------------------------------- |
-| Next.js 14 App Router | `src/app/`                           | ✅ 完整路由结构                              |
-| 新版 Stitch 设计系统  | `tailwind.config.ts` + `globals.css` | ✅ 亮色主题完成                              |
-| AppShell 侧边栏       | `AppShell.tsx`                       | ✅ 亮色 Stitch 风格                          |
-| 登录/注册页           | `(auth)/login/page.tsx`              | ✅ 完整                                      |
-| Dashboard 主页        | `dashboard/page.tsx`                 | ✅ Bento Grid + 顶导栏                       |
-| 任务管理页            | `tasks/page.tsx`                     | ✅ 完整 CRUD                                 |
-| 机会收藏页            | `saved/page.tsx`                     | ✅ 带搜索过滤                                |
-| Chat 分析页           | `chat/page.tsx`                      | ✅ AI Analyst 双栏布局                       |
-| OpportunityCard       | `dashboard/OpportunityCard.tsx`      | ✅ Stitch 风格                               |
-| TaskCard              | `dashboard/TaskCard.tsx`             | ✅ 完整                                      |
-| Zustand 状态          | `store/index.ts`                     | ✅ useAuthStore                              |
-| API 客户端            | `lib/api.ts`                         | ✅ Axios + 拦截器                            |
-| 自定义 Hooks          | `hooks/`                             | ✅ useAuth/useTasks/useOpportunities/useChat |
+| 模块 | 文件 | 状态 |
+| - | - | - |
+| Next.js 14 App Router | `src/app/` | ✅ 完整路由结构 |
+| 新版 Stitch 设计系统 | `tailwind.config.ts` + `globals.css` | ✅ 亮色主题完成 |
+| AppShell 侧边栏 | `AppShell.tsx` | ✅ 亮色 Stitch 风格 |
+| 登录/注册页 | `(auth)/login/page.tsx` | ✅ 完整 |
+| Dashboard 主页 | `dashboard/page.tsx` | ✅ Bento Grid + 顶导栏 |
+| 任务管理页 | `tasks/page.tsx` | ✅ 完整 CRUD |
+| 机会收藏页 | `saved/page.tsx` | ✅ 带搜索过滤 |
+| Chat 分析页 | `chat/page.tsx` | ✅ AI Analyst 双栏布局 |
+| OpportunityCard | `dashboard/OpportunityCard.tsx` | ✅ Stitch 风格 |
+| TaskCard | `dashboard/TaskCard.tsx` | ✅ 完整 |
+| Zustand 状态 | `store/index.ts` | ✅ useAuthStore |
+| API 客户端 | `lib/api.ts` | ✅ Axios + 拦截器 |
+| 自定义 Hooks | `hooks/` | ✅ useAuth/useTasks/useOpportunities/useChat |
 
 ---
 
@@ -139,34 +139,34 @@
 
 #### 后端缺口
 
-| 缺失功能                  | 重要程度 | 说明                                                                                 |
-| ------------------------- | -------- | ------------------------------------------------------------------------------------ |
-| **5 个模块分类**          | 🔴 高    | 现在所有机会都是同一种类型，没有 category 字段                                       |
-| **arXiv 采集器**          | 🔴 高    | 学术研究模块的核心数据源                                                             |
-| **SEC EDGAR 采集器**      | 🟡 中    | 股市模块                                                                             |
-| **Product Hunt 采集器**   | 🟡 中    | 商业市场和创业机会模块                                                               |
-| **OpenAlex 采集器**       | 🟡 中    | 学术研究                                                                             |
-| **Stack Exchange 采集器** | 🟡 中    | 求职热点                                                                             |
-| **RAG 向量检索**          | 🔴 高    | Chat 当前直接传 opportunity 文本，没有向量数据库检索相关信号                         |
-| **卡片表（cards）**       | 🔴 高    | 现在 opportunity = card，但业务上需要独立的 Card 实体，含 category/tags/is_favorited |
-| **实体抽取**              | 🟡 中    | 无公司/技术/岗位实体识别                                                             |
-| **用户收藏/点赞**         | 🟡 中    | 有 UI 按钮，但没有后端接口和数据表                                                   |
-| **报告生成**              | 🟡 中    | ReportAgent 尚未实现                                                                 |
-| **对话持久化**            | 🟡 中    | Chat 消息不保存，刷新后消失                                                          |
-| **多 Agent 分工**         | 🟠 低    | 当前只有一个 analysis_service，没有 MarketAgent/ResearchAgent 等                     |
-| **定时任务分模块**        | 🟠 低    | 所有采集任务用统一间隔，没有按模块差异化调度                                         |
+| 缺失功能 | 重要程度 | 说明 |
+| - | - | - |
+| **5 个模块分类** | 🔴 高 | 现在所有机会都是同一种类型，没有 category 字段 |
+| **arXiv 采集器** | 🔴 高 | 学术研究模块的核心数据源 |
+| **SEC EDGAR 采集器** | 🟡 中 | 股市模块|
+| **Product Hunt 采集器** | 🟡 中 | 商业市场和创业机会模块 |
+| **OpenAlex 采集器** | 🟡 中 | 学术研究|
+| **Stack Exchange 采集器** | 🟡 中 | 求职热点|
+| **RAG 向量检索** | 🔴 高 | Chat 当前直接传 opportunity 文本，没有向量数据库检索相关信号 |
+| **卡片表（cards）** | 🔴 高 | 现在 opportunity = card，但业务上需要独立的 Card 实体，含 category/tags/is_favorited |
+| **实体抽取**| 🟡 中 | 无公司/技术/岗位实体识别 |
+| **用户收藏/点赞** | 🟡 中 | 有 UI 按钮，但没有后端接口和数据表 |
+| **报告生成**| 🟡 中 | ReportAgent 尚未实现|
+| **对话持久化** | 🟡 中 | Chat 消息不保存，刷新后消失 |
+| **多 Agent 分工** | 🟠 低 | 当前只有一个 analysis_service，没有 MarketAgent/ResearchAgent 等 |
+| **定时任务分模块**| 🟠 低 | 所有采集任务用统一间隔，没有按模块差异化调度|
 
 #### 前端缺口
 
-| 缺失功能              | 重要程度 | 说明                                                     |
-| --------------------- | -------- | -------------------------------------------------------- |
-| **五模块 Tab 切换**   | 🔴 高    | 顶导栏有 Tab，但点击无实际过滤效果                       |
-| **卡片选中→右侧联动** | 🔴 高    | 点卡片后右侧 AI Analyst 自动读取，是核心交互，当前未实现 |
-| **收藏/点赞按钮功能** | 🟡 中    | UI 有按钮，无实际 API 调用                               |
-| **Notes（笔记）功能** | 🟡 中    | 导航有 Notes，页面不存在                                 |
-| **卡片翻转动效**      | 🟠 低    | 每张卡片的翻转按钮                                       |
-| **周报页面**          | 🟠 低    | 报告功能尚未设计                                         |
-| **移动端适配**        | 🟠 低    | 底部 nav 存在但不完善                                    |
+| 缺失功能| 重要程度 | 说明|
+| - | - | - |
+| **五模块 Tab 切换** | 🔴 高 | 顶导栏有 Tab，但点击无实际过滤效果|
+| **卡片选中→右侧联动** | 🔴 高 | 点卡片后右侧 AI Analyst 自动读取，是核心交互，当前未实现 |
+| **收藏/点赞按钮功能** | 🟡 中 | UI 有按钮，无实际 API 调用 |
+| **Notes（笔记）功能** | 🟡 中 | 导航有 Notes，页面不存在 |
+| **卡片翻转动效** | 🟠 低 | 每张卡片的翻转按钮 |
+| **周报页面** | 🟠 低 | 报告功能尚未设计|
+| **移动端适配**| 🟠 低  | 底部 nav 存在但不完善 |
 
 ---
 
@@ -322,16 +322,16 @@ CREATE TABLE reports (
 
 ### Agent 分工表
 
-| Agent 文件              | 职责               | 核心 Prompt 侧重                         |
-| ----------------------- | ------------------ | ---------------------------------------- |
-| `market_agent.py`       | 商业市场分析       | 行业动态、产品发布、市场机会、竞品       |
-| `research_agent.py`     | 学术研究分析       | 论文总结、研究方向聚类、paper-to-project |
-| `startup_agent.py`      | 创业机会分析       | MVP 建议、商业模式、市场进入策略         |
-| `stock_pulse_agent.py`  | 股市公开信息       | 财报摘要、AI 暴露度、新闻情绪分析        |
-| `job_market_agent.py`   | 求职热点分析       | 技能需求、岗位趋势、学习路线             |
-| `report_agent.py`       | 报告生成           | 周报、公司研究、学习路线报告             |
-| `chat_agent.py`         | 对话分析（RAG 版） | 当前选中卡片 + 向量检索相关 items        |
-| `orchestrator_agent.py` | 总调度             | 决定哪个 Agent 先跑、什么时候评分        |
+| Agent 文件 | 职责 | 核心 Prompt 侧重 |
+| - | - | - |
+| `market_agent.py` | 商业市场分析 | 行业动态、产品发布、市场机会、竞品 |
+| `research_agent.py` | 学术研究分析 | 论文总结、研究方向聚类、paper-to-project |
+| `startup_agent.py` | 创业机会分析 | MVP 建议、商业模式、市场进入策略 |
+| `stock_pulse_agent.py` | 股市公开信息 | 财报摘要、AI 暴露度、新闻情绪分析 |
+| `job_market_agent.py` | 求职热点分析 | 技能需求、岗位趋势、学习路线 |
+| `report_agent.py` | 报告生成 | 周报、公司研究、学习路线报告 |
+| `chat_agent.py` | 对话分析（RAG 版） | 当前选中卡片 + 向量检索相关 items |
+| `orchestrator_agent.py` | 总调度 | 决定哪个 Agent 先跑、什么时候评分 |
 
 ### RAG Chat 增强方案
 
