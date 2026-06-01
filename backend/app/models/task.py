@@ -8,6 +8,8 @@ from sqlalchemy.types import JSON
 
 from app.database import Base
 
+VALID_CATEGORIES = {"market", "research", "startup", "stocks", "jobs"}
+
 
 class TaskStatus(str, enum.Enum):
     pending = "pending"
@@ -23,6 +25,8 @@ class Task(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    # 所属模块：market | research | startup | stocks | jobs
+    category: Mapped[str] = mapped_column(String(50), nullable=False, default="startup", index=True)
     keywords: Mapped[list] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=False, default=list)
     sources: Mapped[list] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=False, default=list)
     interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=3600)

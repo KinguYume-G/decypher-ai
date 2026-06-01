@@ -71,11 +71,12 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("DECYPHER_DEEPSEEK_MODEL", "DEEPSEEK_MODEL", "deepseek_model"),
     )
 
-    # data collection
+    # data collection — github
     github_token: str = Field(
         "",
         validation_alias=AliasChoices("GITHUB_TOKEN", "DECYPHER_GITHUB_TOKEN", "github_token"),
     )
+    # data collection — reddit
     reddit_client_id: str = Field(
         "",
         validation_alias=AliasChoices("REDDIT_CLIENT_ID", "DECYPHER_REDDIT_CLIENT_ID", "reddit_client_id"),
@@ -87,6 +88,16 @@ class Settings(BaseSettings):
     reddit_user_agent: str = Field(
         "DecypherAI/0.1.0",
         validation_alias=AliasChoices("REDDIT_USER_AGENT", "DECYPHER_REDDIT_USER_AGENT", "reddit_user_agent"),
+    )
+    # data collection — product hunt (optional; service degrades gracefully when empty)
+    producthunt_api_key: str = Field(
+        "",
+        validation_alias=AliasChoices("PRODUCTHUNT_API_KEY", "DECYPHER_PRODUCTHUNT_API_KEY", "producthunt_api_key"),
+    )
+    # data collection — stack exchange (optional; raises rate limit 300→10000/day)
+    stackexchange_api_key: str = Field(
+        "",
+        validation_alias=AliasChoices("STACKEXCHANGE_API_KEY", "DECYPHER_STACKEXCHANGE_API_KEY", "stackexchange_api_key"),
     )
 
     # task

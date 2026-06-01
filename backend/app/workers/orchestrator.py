@@ -35,10 +35,13 @@ async def run_analysis_task(task_id: int) -> None:
                 await _finish(db, task, TaskStatus.completed)
                 return
 
+            # 提取原始信号 URL 列表，存入 source_signals
+            signal_urls = [s.url for s in raw_signals if s.url][:20]
+
             opportunities = await analysis_service.analyze_signals(
-                signals_text, task.keywords
+                signals_text, task.keywords, category=task.category
             )
-            await _store_opportunities(db, task, opportunities)
+            await _store_opportunities(db, task, opportunities, signal_urls)
             await _finish(db, task, TaskStatus.completed)
             logger.info(
                 f"Task {task_id}: pipeline complete — {len(opportunities)} opportunities stored"
@@ -70,7 +73,10 @@ async def _finish(db: AsyncSession, task: Task, status: TaskStatus) -> None:
 
 
 async def _store_opportunities(
-    db: AsyncSession, task: Task, opportunities: list[dict]
+    db: AsyncSession,
+    task: Task,
+    opportunities: list[dict],
+    raw_signal_urls: list[str],
 ) -> None:
     for opp in opportunities:
         scores = opp.get("scores", {})
@@ -86,6 +92,7 @@ async def _store_opportunities(
         db.add(
             Opportunity(
                 task_id=task.id,
+                category=task.category,
                 title=opp.get("title", "")[:300],
                 what_to_build=opp.get("what_to_build", ""),
                 why_it_matters=opp.get("why_it_matters", ""),
@@ -97,7 +104,7 @@ async def _store_opportunities(
                 score_commercial=scores.get("commercial", 0),
                 score_total=score_total,
                 keywords_matched=opp.get("keywords_matched", []),
-                source_signals=[],
+                source_signals=raw_signal_urls,
             )
         )
     await db.commit()

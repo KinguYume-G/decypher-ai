@@ -5,7 +5,9 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def mock_scheduler():
-    with patch("app.api.v1.tasks.add_task_job"), patch("app.api.v1.tasks.remove_task_job"):
+    with patch("app.api.v1.tasks.add_task_job"), \
+         patch("app.api.v1.tasks.remove_task_job"), \
+         patch("app.workers.orchestrator.run_analysis_task"):
         yield
 
 
@@ -54,7 +56,7 @@ class TestCreateTask:
             "keywords": ["test"],
             "sources": ["github"],
         })
-        assert res.status_code == 403
+        assert res.status_code == 401
 
 
 class TestListTasks:
@@ -72,7 +74,7 @@ class TestListTasks:
 
     async def test_list_tasks_unauthenticated(self, client):
         res = await client.get("/api/v1/tasks")
-        assert res.status_code == 403
+        assert res.status_code == 401
 
 
 class TestGetTask:

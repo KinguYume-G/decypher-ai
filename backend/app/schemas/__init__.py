@@ -59,7 +59,30 @@ class TokenOut(BaseModel):
 
 # ── Task Schemas ──────────────────────────────────────────
 
-VALID_SOURCES = {"github", "hackernews", "reddit"}
+VALID_SOURCES = {
+    # 通用
+    "github", "hackernews", "devto", "reddit", "producthunt",
+    # 学术研究
+    "arxiv", "openalex", "paperswithcode", "semanticscholar", "rss_research",
+    # 商业市场
+    "rss_market",
+    # 创业机会
+    "rss_startup",
+    # 股市动态
+    "sec", "rss_stocks",
+    # 求职热点
+    "stackexchange", "remoteok", "rss_jobs",
+}
+VALID_CATEGORIES = {"market", "research", "startup", "stocks", "jobs"}
+
+# 各模块最优默认数据源组合（全部免费可用）
+CATEGORY_DEFAULT_SOURCES: dict[str, list[str]] = {
+    "startup":  ["github", "hackernews", "devto", "producthunt", "rss_startup"],
+    "market":   ["github", "hackernews", "devto", "producthunt", "rss_market"],
+    "research": ["arxiv", "openalex", "paperswithcode", "semanticscholar", "rss_research"],
+    "stocks":   ["sec", "hackernews", "rss_stocks"],
+    "jobs":     ["stackexchange", "remoteok", "devto", "rss_jobs"],
+}
 
 
 class TaskCreate(BaseModel):
@@ -67,6 +90,7 @@ class TaskCreate(BaseModel):
     keywords: list[str]
     sources: list[str]
     interval_seconds: int = 3600
+    category: str = "startup"
 
     @field_validator("keywords")
     @classmethod
@@ -92,12 +116,20 @@ class TaskCreate(BaseModel):
             raise ValueError("执行间隔最少 300 秒（5分钟）")
         return v
 
+    @field_validator("category")
+    @classmethod
+    def category_valid(cls, v: str) -> str:
+        if v not in VALID_CATEGORIES:
+            raise ValueError(f"不支持的模块分类: {v}，可选: {VALID_CATEGORIES}")
+        return v
+
 
 class TaskUpdate(BaseModel):
     name: str | None = None
     keywords: list[str] | None = None
     interval_seconds: int | None = None
     is_active: bool | None = None
+    category: str | None = None
 
 
 class TaskOut(BaseModel):
@@ -106,6 +138,7 @@ class TaskOut(BaseModel):
     id: int
     user_id: int
     name: str
+    category: str
     keywords: list
     sources: list
     interval_seconds: int
@@ -125,6 +158,7 @@ class OpportunityOut(BaseModel):
 
     id: int
     task_id: int
+    category: str
     title: str
     what_to_build: str
     why_it_matters: str
@@ -137,6 +171,7 @@ class OpportunityOut(BaseModel):
     score_total: float
     keywords_matched: list
     source_signals: list
+    is_favorited: bool = False
     created_at: datetime
 
 
@@ -152,6 +187,7 @@ class ChatRequest(BaseModel):
     message: str
     opportunity_id: int | None = None
     conversation_history: list[ChatMessage] = []
+    report_mode: bool = False  # True → 生成结构化报告
 
     @field_validator("message")
     @classmethod
@@ -164,3 +200,35 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     role: Literal["assistant"] = "assistant"
     content: str
+
+
+# ── Note Schemas ──────────────────────────────────────────
+
+
+class NoteCreate(BaseModel):
+    title: str
+    content: str
+
+    @field_validator("title")
+    @classmethod
+    def title_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Title cannot be empty")
+        return v.strip()[:300]
+
+    @field_validator("content")
+    @classmethod
+    def content_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Content cannot be empty")
+        return v.strip()
+
+
+class NoteOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    user_id: int
+    title: str
+    content: str
+    created_at: datetime

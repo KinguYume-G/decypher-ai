@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import app.models  # noqa: F401 — 注册所有 ORM 模型，让 init_db 能建表
-from app.api.v1 import auth, chat, opportunities, tasks
+from app.api.v1 import auth, cards, chat, notes, opportunities, seed, tasks
 from app.config import settings
 from app.core.scheduler import scheduler
 from app.database import init_db
@@ -38,7 +38,10 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(tasks.router, prefix="/api/v1")
 app.include_router(opportunities.router, prefix="/api/v1")
+app.include_router(cards.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
+app.include_router(notes.router, prefix="/api/v1")
+app.include_router(seed.router, prefix="/api/v1")
 
 
 @app.get("/health")

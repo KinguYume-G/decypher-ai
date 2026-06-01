@@ -3,40 +3,10 @@ import logging
 import re
 
 from app.config import settings
+from app.services.agents import get_system_prompt
 from app.services.llm_client import chat_completion
 
 logger = logging.getLogger(__name__)
-
-_SYSTEM_PROMPT = """You are a startup opportunity analyst. Analyze signals from GitHub and Hacker News.
-Extract 2-4 concrete startup opportunities from the signals provided.
-
-Respond ONLY with valid JSON in exactly this structure (no markdown, no code fences, no explanation):
-{
-  "opportunities": [
-    {
-      "title": "Opportunity title (max 15 words)",
-      "what_to_build": "Concrete product description (2-3 sentences)",
-      "why_it_matters": "Why this opportunity exists now, with evidence from the signals (2-3 sentences)",
-      "how_to_execute": "Step-by-step MVP approach (2-3 sentences)",
-      "scores": {
-        "trend": 8.0,
-        "novelty": 7.0,
-        "competition": 3.0,
-        "feasibility": 8.0,
-        "commercial": 7.5
-      },
-      "keywords_matched": ["keyword1", "keyword2"]
-    }
-  ]
-}
-
-Score guide (1-10):
-- trend: How strongly is this trending right now?
-- novelty: How unique/novel is this idea?
-- competition: How crowded is the space? (lower = less competition = better)
-- feasibility: How feasible is a small-team MVP?
-- commercial: How clear is the monetization path?
-"""
 
 
 def _extract_json(text: str) -> dict:
@@ -73,16 +43,23 @@ def _extract_json(text: str) -> dict:
 
 class AnalysisService:
     async def analyze_signals(
-        self, signals_text: str, keywords: list[str]
+        self,
+        signals_text: str,
+        keywords: list[str],
+        category: str = "startup",
     ) -> list[dict]:
         """
-        Send processed signals to the LLM and return structured opportunity dicts.
+        Send processed signals to the LLM using the category-specific prompt.
         Contract: never raises — returns [] on any failure.
         """
         if not signals_text.strip():
             return []
 
+        system_prompt = get_system_prompt(category)
+        # /no_think disables qwen3's extended thinking mode → much faster JSON output
         user_message = (
+            "/no_think\n"
+            f"Module: {category}\n"
             f"Keywords being tracked: {', '.join(keywords)}\n\n"
             f"Signals:\n{signals_text}"
         )
@@ -90,7 +67,7 @@ class AnalysisService:
         try:
             raw = await chat_completion(
                 [
-                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_message},
                 ],
                 max_tokens=settings.ai_max_tokens,
@@ -105,7 +82,7 @@ class AnalysisService:
             logger.error(f"AI returned unparseable response: {e}")
             return []
         except Exception as e:
-            logger.error(f"AI analysis failed: {e}")
+            logger.error(f"AI analysis failed ({type(e).__name__}): {e!r}")
             return []
 
 

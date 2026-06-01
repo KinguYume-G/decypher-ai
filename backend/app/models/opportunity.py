@@ -15,6 +15,8 @@ class Opportunity(Base):
     task_id: Mapped[int] = mapped_column(
         ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # 继承自 task.category：market | research | startup | stocks | jobs
+    category: Mapped[str] = mapped_column(String(50), nullable=False, default="startup", index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     what_to_build: Mapped[str] = mapped_column(Text, nullable=False)
     why_it_matters: Mapped[str] = mapped_column(Text, nullable=False)
@@ -39,8 +41,10 @@ class Opportunity(Base):
     )
 
     task = relationship("Task", back_populates="opportunities")
+    # favorites 关联由 UserFavorite 的 FK cascade 管理；不在此定义关系以避免懒加载
 
     __table_args__ = (
+        Index("idx_opportunities_category", "category"),
         Index("idx_opportunities_score_total", "score_total"),
         Index("idx_opportunities_created_at", "created_at"),
     )

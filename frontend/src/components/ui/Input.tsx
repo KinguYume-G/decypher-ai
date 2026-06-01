@@ -8,20 +8,24 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function Input({ label, error, className, ...props }: InputProps) {
   return (
-    <label className="block space-y-2">
-      {label ? (
-        <span className="font-label-sm text-xs uppercase tracking-widest text-primary-fixed-dim">
+    <label className="block space-y-1.5">
+      {label && (
+        <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider block">
           {label}
         </span>
-      ) : null}
+      )}
       <input
         className={cn(
-          "h-11 w-full rounded-lg border border-white/10 bg-surface-container-lowest px-3 text-sm text-on-surface outline-none placeholder:text-outline focus:border-primary focus:ring-1 focus:ring-primary/30",
+          "w-full rounded-lg border border-outline-variant/30 bg-surface-container-low/50 px-md py-sm font-body-md text-body-md text-on-surface placeholder-on-surface-variant/50 outline-none transition-all",
+          "focus:border-secondary focus:ring-2 focus:ring-secondary/20",
+          error && "border-error focus:ring-error/20",
           className
         )}
         {...props}
       />
-      {error ? <span className="text-xs text-error">{error}</span> : null}
+      {error && (
+        <p className="font-label-sm text-label-sm text-error">{error}</p>
+      )}
     </label>
   );
 }

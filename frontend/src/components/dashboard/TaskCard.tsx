@@ -11,52 +11,62 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onRun, onDelete }: TaskCardProps) {
-  const tone = {
-    pending: "muted",
-    running: "secondary",
-    completed: "success",
-    failed: "danger",
-    paused: "warning",
-  } as const;
+  const tonemap: Record<Task["status"], "primary" | "success" | "muted" | "danger" | "warning"> = {
+    pending:   "muted",
+    running:   "primary",   // secondary-fixed purple
+    completed: "success",   // tertiary-fixed cyan
+    failed:    "danger",
+    paused:    "warning",
+  };
 
   return (
-    <article className="glass-panel rounded-xl p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-headline-md text-lg text-on-surface">{task.name}</h3>
-          <p className="mt-1 text-sm text-on-surface-variant">
+    <article className="glass-card rounded-xl p-md hover:shadow-md transition-all duration-200">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-sm">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-headline-md text-headline-md text-on-surface truncate">
+            {task.name}
+          </h3>
+          <p className="mt-xs font-body-md text-sm text-on-surface-variant">
             Every {formatInterval(task.interval_seconds)} · {task.run_count} runs
           </p>
         </div>
-        <Badge tone={tone[task.status]}>{task.status}</Badge>
+        <Badge tone={tonemap[task.status]}>{task.status}</Badge>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {task.keywords.map((keyword) => (
-          <Badge key={keyword} tone="primary">
-            {keyword}
+      {/* Keyword chips */}
+      <div className="mt-sm flex flex-wrap gap-xs">
+        {task.keywords.map((kw) => (
+          <Badge key={kw} tone="muted">
+            {kw}
           </Badge>
         ))}
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 rounded-lg bg-black/20 p-3 text-sm">
+      {/* Metadata grid */}
+      <div className="mt-md grid grid-cols-2 gap-sm rounded-lg bg-surface-container p-sm text-sm">
         <div>
           <div className="font-label-sm text-[10px] uppercase text-outline">Sources</div>
-          <div className="mt-1 text-on-surface">{task.sources.join(", ")}</div>
+          <div className="mt-xs text-on-surface">{task.sources.join(", ")}</div>
         </div>
         <div>
           <div className="font-label-sm text-[10px] uppercase text-outline">Last run</div>
-          <div className="mt-1 text-on-surface">{formatDate(task.last_run_at)}</div>
+          <div className="mt-xs text-on-surface">{formatDate(task.last_run_at)}</div>
         </div>
       </div>
 
-      <div className="mt-5 flex items-center gap-2">
-        <Button variant="secondary" onClick={() => onRun(task.id)} className="flex-1">
-          <Play size={16} />
-          Run
+      {/* Actions */}
+      <div className="mt-md flex items-center gap-sm">
+        <Button variant="primary" onClick={() => onRun(task.id)} className="flex-1">
+          <Play size={15} />
+          Run now
         </Button>
-        <Button variant="ghost" onClick={() => onDelete(task.id)} aria-label="Delete task">
-          <Trash2 size={16} />
+        <Button
+          variant="ghost"
+          onClick={() => onDelete(task.id)}
+          aria-label="Delete task"
+        >
+          <Trash2 size={15} />
         </Button>
       </div>
     </article>

@@ -1,28 +1,36 @@
-import { cn, compactScore } from "@/lib/utils";
-
 interface ScoreBarProps {
   label: string;
-  value: number;
+  value: number; // 0–10
   tone?: "primary" | "secondary" | "tertiary";
 }
 
 export function ScoreBar({ label, value, tone = "primary" }: ScoreBarProps) {
-  const tones = {
-    primary: "bg-primary",
-    secondary: "bg-secondary",
-    tertiary: "bg-tertiary",
-  };
+  const pct = Math.round((value / 10) * 100);
+
+  const fillClass =
+    tone === "tertiary"
+      ? "bg-on-tertiary-container"
+      : "bg-secondary";
+
+  const glowClass =
+    tone === "tertiary"
+      ? "shadow-[0_0_6px_rgba(0,144,169,0.4)]"
+      : "shadow-[0_0_6px_rgba(113,42,226,0.4)]";
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-on-surface-variant">{label}</span>
-        <span className="font-label-sm text-on-surface">{compactScore(value)}</span>
+    <div className="space-y-xs">
+      <div className="flex items-center justify-between">
+        <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">
+          {label}
+        </span>
+        <span className="font-label-md text-label-md text-on-surface font-bold">
+          {value.toFixed(1)}
+        </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+      <div className="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
         <div
-          className={cn("h-full rounded-full", tones[tone])}
-          style={{ width: `${Math.max(0, Math.min(value * 10, 100))}%` }}
+          className={`h-full rounded-full transition-all duration-500 ${fillClass} ${glowClass}`}
+          style={{ width: `${pct}%` }}
         />
       </div>
     </div>

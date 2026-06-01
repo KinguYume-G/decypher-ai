@@ -7,21 +7,30 @@ from app.core.security import decode_access_token
 from app.database import get_db
 from app.models.user import User
 
-bearer_scheme = HTTPBearer()
+# auto_error=False 让我们自己返回 401，而不是 FastAPI 默认的 403
+bearer_scheme = HTTPBearer(auto_error=False)
+
+_UNAUTH = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="未认证或 Token 已过期",
+    headers={"WWW-Authenticate": "Bearer"},
+)
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    token = credentials.credentials
-    user_id = decode_access_token(token)
+    if credentials is None:
+        raise _UNAUTH
+
+    user_id = decode_access_token(credentials.credentials)
     if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token 无效或已过期")
+        raise _UNAUTH
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在或已被禁用")
+        raise _UNAUTH
 
     return user

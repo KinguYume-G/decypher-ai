@@ -17,16 +17,24 @@ export function Button({
   ...props
 }: ButtonProps) {
   const variants: Record<ButtonVariant, string> = {
-    primary: "btn-gradient text-white shadow-lg shadow-primary/20 hover:shadow-primary/30",
-    secondary: "border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15",
-    ghost: "border border-white/10 bg-white/5 text-on-surface hover:bg-white/10",
-    danger: "border border-error/30 bg-error/10 text-error hover:bg-error/15",
+    // Purple → Cyan gradient, white text
+    primary:
+      "accent-gradient-bg text-on-primary shadow-lg shadow-secondary/20 hover:opacity-90 active:scale-95",
+    // Ghost with outline border
+    secondary:
+      "bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors active:scale-95",
+    // Minimal ghost
+    ghost:
+      "border border-outline-variant/30 bg-transparent text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors",
+    // Error state
+    danger:
+      "border border-outline-variant/30 bg-error-container text-on-error-container hover:opacity-90",
   };
 
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 font-label-md text-label-md transition-all disabled:cursor-not-allowed disabled:opacity-50",
         variants[variant],
         className
       )}

@@ -77,7 +77,7 @@ class TestMe:
 
     async def test_me_unauthenticated(self, client):
         res = await client.get("/api/v1/auth/me")
-        assert res.status_code == 403
+        assert res.status_code == 401
 
     async def test_me_invalid_token(self, client):
         client.headers.update({"Authorization": "Bearer invalidtoken"})

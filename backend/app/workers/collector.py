@@ -2,17 +2,50 @@ import asyncio
 import logging
 
 from app.models.task import Task
+from app.services.arxiv_service import arxiv_service
 from app.services.base_data_service import RawSignal
+from app.services.devto_service import devto_service
 from app.services.github_service import github_service
 from app.services.hn_service import hn_service
+from app.services.openalex_service import openalex_service
+from app.services.papers_with_code_service import papers_with_code_service
+from app.services.producthunt_service import producthunt_service
 from app.services.reddit_service import reddit_service
+from app.services.remoteok_service import remoteok_service
+from app.services.rss_service import (
+    rss_jobs_service, rss_market_service, rss_research_service,
+    rss_startup_service, rss_stocks_service,
+)
+from app.services.sec_service import sec_service
+from app.services.semantic_scholar_service import semantic_scholar_service
+from app.services.stackexchange_service import stackexchange_service
 
 logger = logging.getLogger(__name__)
 
 _SERVICE_MAP = {
-    "github": github_service,
-    "hackernews": hn_service,
-    "reddit": reddit_service,
+    # ── 通用 ─────────────────────────────────────────────
+    "github":             github_service,
+    "hackernews":         hn_service,
+    "devto":              devto_service,
+    "reddit":             reddit_service,         # 有 Key 时自动生效
+    "producthunt":        producthunt_service,    # 需 PRODUCTHUNT_API_KEY
+    # ── 学术研究 ─────────────────────────────────────────
+    "arxiv":              arxiv_service,
+    "openalex":           openalex_service,
+    "paperswithcode":     papers_with_code_service,
+    "semanticscholar":    semantic_scholar_service,
+    "rss_research":       rss_research_service,
+    # ── 商业市场 ─────────────────────────────────────────
+    "rss_market":         rss_market_service,
+    # ── 创业机会 ─────────────────────────────────────────
+    "rss_startup":        rss_startup_service,
+    # ── 股市动态 ─────────────────────────────────────────
+    "sec":                sec_service,
+    "rss_stocks":         rss_stocks_service,
+    # ── 求职热点 ─────────────────────────────────────────
+    "stackexchange":      stackexchange_service,
+    "remoteok":           remoteok_service,
+    "rss_jobs":           rss_jobs_service,
 }
 
 

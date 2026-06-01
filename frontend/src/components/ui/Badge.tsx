@@ -9,18 +9,23 @@ interface BadgeProps {
 
 export function Badge({ children, tone = "muted", className }: BadgeProps) {
   const tones = {
-    primary: "border-primary/20 bg-primary/10 text-primary",
-    secondary: "border-secondary/20 bg-secondary/10 text-secondary",
-    success: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
-    warning: "border-tertiary/20 bg-tertiary/10 text-tertiary",
-    danger: "border-error/20 bg-error/10 text-error",
-    muted: "border-white/10 bg-white/5 text-on-surface-variant",
+    // Selected / AI-driven → purple fill (secondary-fixed)
+    primary:   "bg-secondary-fixed text-on-secondary-fixed",
+    secondary: "bg-secondary-fixed text-on-secondary-fixed",
+    // Success / data → cyan fill (tertiary-fixed)
+    success:   "bg-tertiary-fixed text-on-tertiary-fixed",
+    // Warning → soft amber border
+    warning:   "border border-outline-variant/50 bg-surface-container text-on-surface-variant",
+    // Danger → error tint
+    danger:    "border border-outline-variant/30 bg-error-container text-on-error-container",
+    // Default keyword chip → ghost border
+    muted:     "border border-outline-variant/30 text-on-surface-variant",
   };
 
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-1 font-label-sm text-[10px] uppercase tracking-widest",
+        "inline-flex items-center rounded font-label-sm text-label-sm uppercase px-xs py-[2px]",
         tones[tone],
         className
       )}

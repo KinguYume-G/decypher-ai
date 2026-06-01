@@ -20,6 +20,7 @@ async def create_task(
     task = Task(
         user_id=current_user.id,
         name=payload.name,
+        category=payload.category,
         keywords=payload.keywords,
         sources=payload.sources,
         interval_seconds=payload.interval_seconds,

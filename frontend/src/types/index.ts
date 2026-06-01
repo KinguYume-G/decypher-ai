@@ -18,10 +18,13 @@ export interface TokenOut {
   user: User;
 }
 
+export type TaskCategory = "market" | "research" | "startup" | "stocks" | "jobs";
+
 export interface Task {
   id: number;
   user_id: number;
   name: string;
+  category: TaskCategory;
   keywords: string[];
   sources: string[];
   interval_seconds: number;
@@ -38,11 +41,13 @@ export interface TaskCreate {
   keywords: string[];
   sources: string[];
   interval_seconds?: number;
+  category?: TaskCategory;
 }
 
 export interface Opportunity {
   id: number;
   task_id: number;
+  category: TaskCategory;
   title: string;
   what_to_build: string;
   why_it_matters: string;
@@ -54,8 +59,22 @@ export interface Opportunity {
   score_commercial: number;
   score_total: number;
   keywords_matched: string[];
-  source_signals: unknown[];
+  source_signals: string[];
+  is_favorited: boolean;
   created_at: string;
+}
+
+export interface Note {
+  id: number;
+  user_id: number;
+  title: string;
+  content: string;
+  created_at: string;
+}
+
+export interface NoteCreate {
+  title: string;
+  content: string;
 }
 
 export interface ChatMessage {

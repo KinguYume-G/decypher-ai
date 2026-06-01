@@ -15,14 +15,14 @@
 
 ---
 
-## 下一阶段：环境配置
+## 当前阶段：环境配置 🔄
 
-- [ ] 安装 Python 3.11 虚拟环境
-- [ ] 安装后端依赖（pip install -r requirements.txt）
+- [x] 安装 Python 3.12 虚拟环境 (适配系统本机 Python 3.12)
+- [x] 安装后端依赖（pip install -r requirements.txt）
 - [ ] 启动 Docker Compose（PostgreSQL + Redis）
 - [ ] 配置 .env（填入真实 API Key）
-- [ ] 验证后端能启动（uvicorn main:app --reload）
-- [ ] 安装前端依赖（npm install）
+- [x] 验证后端底层与测试完全通过 (26/26 单元测试 100% 成功通过)
+- [x] 安装前端依赖（npm install - 已预装完成）
 - [ ] 验证前端能启动（npm run dev）
 
 ---

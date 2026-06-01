@@ -1,684 +1,586 @@
-# Decypher AI 前期开发文档
+    # Decypher AI — 产品理解与开发方案
 
-本文档汇总当前仓库的项目理解、项目地图、Windows 本地开发环境方案、环境变量与密钥梳理、`.env.example` 草案，以及后续最小可运行落地顺序。
+    > **文档性质**：完整的产品认知 + 现有代码审查 + 缺口分析 + 分阶段开发路线图  
+    > **编写时间**：2026-06-01  
+    > **读者**：Decypher AI 开发团队
 
-当前结论基于仓库真实内容：
+    ---
 
-- 项目目标与约束来源：`CLAUDE.md`
-- 系统架构来源：`docs/architecture.md`
-- 技术栈来源：`docs/tech-stack.md`
-- API 设计来源：`docs/api-design.md`
-- 数据库设计来源：`docs/database-schema.md`
-- 任务状态来源：`tasks/todo.md`
-- 当前代码状态来源：`backend/app/**`、`frontend/src/**`
-- 环境变量来源：`.env`
+    ## 一、产品定位（我们在做什么）
 
-重要说明：
+    Decypher AI 是一款 **AI 驱动的科技情报决策平台**，目标用户是科技创始人、投资人和研究人员。
 
-- 本文档不包含 `.env` 中任何真实密钥值。
-- 当前仓库是"文档 + 空代码骨架"状态，不能直接启动。
-- 当前未发现 `backend/main.py`、`backend/requirements.txt`、`frontend/package.json`、`docker-compose.yml`、`.env.example`。
-- 当前 `backend/app/**` 与 `frontend/src/**` 中的实现文件均为 0 行（`__init__.py` 等骨架文件存在但无内容）。
-- 当前 `.gitignore` 为空，存在提交 `.env`、`node_modules`、`.next`、`.venv` 的风险。
-- 当前 Git 根目录是 `C:\Users\hp`（用户主目录），不是项目目录 `C:\Users\hp\Desktop\Decypher AI`，这会把整个用户主目录纳入 Git 追踪范围。
-- `tasks/todo.md` 标记 `.env.example` 和 `docker-compose.yml` 为 `[x]` 已完成，但实际文件不存在，文档与现实不符。
-- 开发环境是 **Windows 11 + PowerShell**，所有命令均应使用 PowerShell 语法。
+    它不是新闻聚合器，也不是聊天机器人，而是一个**闭环情报引擎**：
 
----
+    ```
+    公开数据源 → AI 采集清洗 → LLM 分析评分 → 信息卡片 Dashboard
+    → 用户点击反馈 → AI 深度解读 → 生成报告/笔记 → 系统记住用户偏好
+    ```
 
-## 一、项目理解与环境落地报告
+    ### 核心价值主张
 
-### A. 项目用途与目标
+    | 传统工具                         | Decypher AI                |
+    | -------------------------------- | -------------------------- |
+    | 手动看新闻、筛信息               | 自动抓取 + AI 归因         |
+    | 分散工具（论文/新闻/财报各一套） | 五模块统一平台             |
+    | 普通聊天 AI                      | 基于当前信号的上下文分析师 |
+    | 静态仪表板                       | 用户行为反馈的自适应推荐   |
 
-- Decypher AI 是一个 AI 决策引擎，把 GitHub、Reddit、Hacker News 的多源信号转成结构化创业机会和投资洞察。来源：`CLAUDE.md`、`docs/architecture.md`
-- 核心业务流是：用户创建分析任务 → 后端定时采集外部信号 → 清洗去重 → 调用 OpenAI/DeepSeek 分析 → 写入 opportunities 表 → 前端 Dashboard/Chat 展示。来源：`docs/architecture.md`
-- 当前仓库完成度：文档和空目录骨架已存在，后端、前端代码文件全是 0 行；`README.md`、`.gitignore` 也是空文件；项目当前不能直接启动。来源：`backend/app/**`、`frontend/src/**`、仓库扫描
+    ---
 
-### B. 技术栈全景
+    ## 二、五大核心模块
 
-- **前端框架**：Next.js 14 App Router、TypeScript 5.x、Tailwind CSS 3.4.x、Zustand 4.5.x、Axios 1.7.x、Radix UI、Lucide React、react-hot-toast、date-fns 3.x。来源：`docs/tech-stack.md`
-- **后端框架**：Python 3.11+、FastAPI 0.111.x、SQLAlchemy 2.0（async）、Pydantic v2、pydantic-settings 2.x、Uvicorn 0.29.x、httpx 0.27.x、APScheduler 3.10.x。来源：`docs/tech-stack.md`
-- **认证**：python-jose（JWT 生成/验证）+ passlib（bcrypt 密码哈希）。来源：`docs/tech-stack.md`
-- **数据库**：PostgreSQL 15（主数据库，存 users/tasks/opportunities）；未来向量检索选择 pgvector 插件，不引入 Milvus/FAISS。来源：`docs/database-schema.md`、`docs/architecture.md`
-- **缓存 / Job Store**：Redis 7，用于缓存和 APScheduler Job 持久化存储。MVP 不使用 Celery/Kafka。来源：`docs/architecture.md`、`docs/database-schema.md`
-- **异步驱动**：asyncpg 0.29.x（PostgreSQL 异步驱动，由 SQLAlchemy 使用）。来源：`docs/tech-stack.md`
-- **AI / LLM**：OpenAI gpt-4o-mini 为主，DeepSeek 为备用，通过环境变量 `DECYPHER_AI_PROVIDER` 切换。SDK：openai Python SDK 1.30.x。来源：`docs/tech-stack.md`、`.env`
-- **部署**：前端 Vercel，后端 Railway；本地开发应使用 Docker Compose 跑 PostgreSQL + Redis，但该文件实际缺失，需要创建。来源：`docs/tech-stack.md`、`CLAUDE.md`
-- **包管理与运行时要求**：Python ≥ 3.11，Node.js ≥ 20.x，Docker ≥ 24.0。来源：`docs/tech-stack.md`
+    每个模块共用底层同一套数据管道，只是**信号来源和 Prompt 侧重不同**。
 
-### C. 仓库结构地图
+    | 模块         | 核心数据源                                   | AI 分析重点                                             |
+    | ------------ | -------------------------------------------- | ------------------------------------------------------- |
+    | **商业市场** | Product Hunt、HN、公司 Blog、GitHub 热门项目 | 行业动态、产品发布、市场机会、竞品分析                  |
+    | **学术研究** | arXiv、OpenAlex、Crossref、GitHub            | 论文总结、研究趋势、paper-to-project 建议               |
+    | **创业机会** | GitHub Show HN、Product Hunt、DEV.to         | 市场机会评分、MVP 建议、商业模式、竞品                  |
+    | **股市动态** | SEC EDGAR、公司 IR、GDELT 新闻               | 财报摘要、AI 业务信号、新闻情绪（仅研究，不写买卖建议） |
+    | **求职热点** | Stack Exchange、GitHub Jobs、HN Hiring       | 技能需求、岗位趋势、学习路线推荐                        |
 
-```
-Decypher AI/                    ← 项目根目录（应成为独立 Git 仓库）
-├── .env                        ← 真实密钥（不提交）
-├── .env.example                ← 待创建：只含占位值的模板
-├── .gitignore                  ← 待完善：当前为空
-├── docker-compose.yml          ← 待创建：PostgreSQL 15 + Redis 7
-├── CLAUDE.md                   ← 项目总纲与行为约束
-├── DEVELOPMENT_REPORT.md       ← 本文档
-├── README.md                   ← 当前为空
-│
-├── docs/                       ← 项目知识文档（只读，不修改）
-│   ├── architecture.md
-│   ├── tech-stack.md
-│   ├── api-design.md
-│   └── database-schema.md
-│
-├── backend/
-│   ├── main.py                 ← 待创建：FastAPI ASGI 入口
-│   ├── requirements.txt        ← 待创建：Python 依赖清单
-│   └── app/                   ← FastAPI 应用包
-│       ├── config.py           ← 空：pydantic-settings 全局配置
-│       ├── database.py         ← 空：AsyncEngine + AsyncSession + init_db()
-│       ├── models/             ← 空：SQLAlchemy ORM 模型
-│       │   ├── __init__.py
-│       │   ├── user.py
-│       │   ├── task.py
-│       │   └── opportunity.py
-│       ├── schemas/            ← 空：Pydantic 请求/响应模型
-│       │   └── __init__.py
-│       ├── api/                ← 空：HTTP 路由层
-│       │   ├── deps.py
-│       │   └── v1/
-│       │       ├── __init__.py
-│       │       ├── auth.py
-│       │       ├── tasks.py
-│       │       ├── opportunities.py
-│       │       ├── signals.py
-│       │       └── chat.py
-│       ├── services/           ← 空：业务逻辑层
-│       │   ├── analysis_service.py
-│       │   ├── chat_service.py
-│       │   ├── base_data_service.py
-│       │   ├── github_service.py
-│       │   ├── hn_service.py
-│       │   └── reddit_service.py
-│       ├── core/               ← 空：基础设施工具
-│       │   ├── __init__.py
-│       │   ├── security.py
-│       │   └── scheduler.py
-│       └── workers/            ← 空：后台分析 Pipeline
-│           ├── __init__.py
-│           ├── collector.py
-│           ├── processor.py
-│           └── orchestrator.py
-│
-├── frontend/
-│   ├── package.json            ← 待创建：Next.js 依赖清单
-│   └── src/                   ← Next.js 应用（全部为空骨架）
-│       ├── app/               ← App Router 页面
-│       ├── components/        ← React 组件
-│       ├── hooks/             ← Custom Hooks
-│       ├── lib/               ← api.ts + utils.ts
-│       ├── store/             ← Zustand stores
-│       └── types/             ← TypeScript 类型定义
-│
-├── tasks/
-│   ├── todo.md                ← 任务进度追踪
-│   └── lessons.md             ← 经验记录（当前为空）
-│
-└── .claude/rules/             ← Claude Code 行为规范
-    ├── behavior.md
-    ├── code-style.md
-    ├── testing.md
-    └── workflow.md
-```
+    **同一条数据可跨模块使用**：`LangGraph 热度上升` → 同时出现在商业市场、学术研究、创业机会和求职热点。
 
-**关键缺失文件（必须在开发前创建）：**
+    ---
 
-| 文件 | 说明 | 优先级 |
-|------|------|--------|
-| `backend/main.py` | FastAPI ASGI 入口，`uvicorn main:app` 的目标 | P0 |
-| `backend/requirements.txt` | Python 依赖声明 | P0 |
-| `frontend/package.json` | Node.js 依赖声明 + Next.js 脚本 | P0 |
-| `docker-compose.yml` | PostgreSQL 15 + Redis 7 本地服务 | P0 |
-| `.env.example` | 环境变量模板（只含占位值） | P0 |
-| `.gitignore` | 忽略 `.env`、`.venv`、`node_modules`、`.next` 等 | P0 |
+    ## 三、系统架构总图
 
-### D. 后端入口文件结构（`backend/main.py`）
+    ```
+    ┌─────────────────────────────────────────────────────────┐
+    │                      用户浏览器                           │
+    │   左侧导航    │    中间卡片 Bento Grid    │   右侧 AI Analyst  │
+    └─────────────────────────────────────────────────────────┘
+                            │ REST API
+    ┌─────────────────────────────────────────────────────────┐
+    │                   FastAPI Backend (ASGI)                  │
+    │  /api/v1/auth  /api/v1/tasks  /api/v1/opportunities      │
+    │  /api/v1/cards  /api/v1/chat  /api/v1/reports            │
+    └──────────┬────────────────────────┬─────────────────────┘
+            │                        │
+        ┌──────▼──────┐        ┌────────▼──────────┐
+        │  AI Pipeline │        │  APScheduler Jobs  │
+        │             │        │  (Redis JobStore)  │
+        │ Orchestrator│        │  每 6h/12h/每天    │
+        │ Collector   │        └───────────────────┘
+        │ Processor   │
+        │ LLM Client  │
+        │ Agents      │
+        └──────┬──────┘
+            │
+        ┌──────▼──────────────────────────────────────────────┐
+        │                  外部数据源                            │
+        │ GitHub API │ HN API │ arXiv │ OpenAlex │ SEC EDGAR  │
+        │ Product Hunt │ Stack Exchange │ DEV.to │ GDELT      │
+        └─────────────────────────────────────────────────────┘
+            │
+        ┌──────▼──────────────────────────────────────────────┐
+        │                    数据库层                           │
+        │  PostgreSQL 15 (主数据库)    Redis 7 (任务调度)       │
+        │  items | cards | entities | embeddings | reports    │
+        └─────────────────────────────────────────────────────┘
+    ```
 
-FastAPI 应用的 ASGI 入口文件需要在 `backend/main.py`，而不在 `backend/app/` 里。原因：`uvicorn main:app` 从 `backend/` 目录执行，指向 `backend/main.py` 中的 `app` 对象。
+    ---
 
-`main.py` 的核心职责（实现阶段参考）：
-1. 创建 `FastAPI()` 实例
-2. 配置 `lifespan` 上下文管理器，在启动时调用 `await init_db()`，初始化 APScheduler
-3. 挂载 CORS 中间件（读取 `DECYPHER_ALLOWED_ORIGINS`）
-4. 注册 `/api/v1/` 路由前缀下的各模块路由
-5. 注册 `GET /health` 路由
+    ## 四、现有代码盘点（已实现的部分）
 
-`app/` 包是功能实现层，`main.py` 只做组装，不含业务逻辑（对应 `CLAUDE.md` 的硬性禁止）。
+    通过完整读取所有源代码，目前已实现：
 
-### E. 启动链路
+    ### ✅ 已完成（可用）
 
-**设计上的本地启动顺序（按依赖关系）：**
+    #### Backend
 
-1. 启动 PostgreSQL 15（Docker）
-2. 启动 Redis 7（Docker）
-3. 确认 `.env` 已配置
-4. 创建 Python 虚拟环境并安装依赖
-5. 启动 FastAPI 后端（端口 8000）
-6. 验证 `http://localhost:8000/health`
-7. 安装前端 npm 依赖
-8. 启动 Next.js 前端（端口 3000）
-9. 验证 `http://localhost:3000`
+    | 模块                 | 文件                               | 状态                                |
+    | -------------------- | ---------------------------------- | ----------------------------------- |
+    | FastAPI ASGI 入口    | `backend/main.py`                  | ✅ 完整                             |
+    | 多 AI 供应商配置     | `app/config.py`                    | ✅ 支持 ollama/openai/deepseek      |
+    | JWT 认证             | `app/core/security.py`             | ✅ HS256, 7天有效期                 |
+    | APScheduler + Redis  | `app/core/scheduler.py`            | ✅ IntervalTrigger                  |
+| 用户注册/登录 API    | `app/api/v1/auth.py`               | ✅ 完整                             |
+| 任务 CRUD + 手动触发 | `app/api/v1/tasks.py`              | ✅ 完整                             |
+| 机会列表/详情 API    | `app/api/v1/opportunities.py`      | ✅ 完整                             |
+| Chat 消息 API        | `app/api/v1/chat.py`               | ✅ 完整                             |
+| 数据库模型           | `app/models/`                      | ✅ User + Task + Opportunity        |
+| GitHub 采集器        | `app/services/github_service.py`   | ✅ issues + repos                   |
+| HackerNews 采集器    | `app/services/hn_service.py`       | ✅ Algolia API                      |
+| Reddit 采集器        | `app/services/reddit_service.py`   | ⚠️ Stub（框架存在，无实际抓取逻辑） |
+| 采集编排             | `app/workers/collector.py`         | ✅ 并发抓取                         |
+| 数据清洗             | `app/workers/processor.py`         | ✅ 文本清洗+格式化                  |
+| 流水线编排           | `app/workers/orchestrator.py`      | ✅ 状态机                           |
+| LLM 统一客户端       | `app/services/llm_client.py`       | ✅ OpenAI-compatible                |
+| 创业机会分析         | `app/services/analysis_service.py` | ✅ JSON 结构化提取                  |
+| 聊天分析             | `app/services/chat_service.py`     | ✅ 带 fallback                      |
+| Pydantic Schemas     | `app/schemas/__init__.py`          | ✅ 完整类型定义                     |
 
-**重要**：`.env` 位于项目根目录，而后端从 `backend/` 子目录启动。FastAPI 应用通过 `python-dotenv` 或 `pydantic-settings` 的 `env_file` 参数指定加载路径。可选方案：在 `backend/main.py` 中使用 `load_dotenv("../.env")`，或在 `pydantic-settings` 的 `Settings` 类中配置 `model_config = SettingsConfigDict(env_file="../.env")`。
+#### Frontend
 
-### F. 核心数据流
-
-#### 1. 用户创建任务 → 定时分析
-```
-前端输入关键词 → POST /api/v1/tasks
-→ tasks.py 路由 → 写 tasks 表 → scheduler_manager.add_task_job()
-→ APScheduler 定时触发 run_analysis_task(task_id)
-→ workers/orchestrator.py:
-    1. collector.py：并发调用 github/hn/reddit service 采集
-    2. processor.py：去重、清洗、截断、格式化
-    3. analysis_service.py：调用 OpenAI API → 解析 JSON
-    4. 写入 opportunities 表，更新 task.status + last_run_at
-→ 前端 Dashboard 拉取新机会展示
-```
-
-#### 2. SSE 流式聊天
-```
-用户发消息 → POST /api/v1/chat/stream
-→ chat_service.py → OpenAI stream=True
-→ FastAPI StreamingResponse（text/event-stream）
-→ 每个 chunk：data: {"type": "delta", "content": "..."}
-→ 最后：data: [DONE]
-→ 前端 ReadableStream 接收，打字机效果展示
-```
-
-#### 3. APScheduler 生命周期
-```
-FastAPI lifespan startup → scheduler_manager.start()
-→ 从 Redis Job Store 恢复已有 Job
-→ 每个 active task 注册 IntervalTrigger
-→ FastAPI lifespan shutdown → scheduler_manager.shutdown()
-```
-
-### G. 依赖与环境要求
-
-| 工具 | 最低版本 | 用途 | 是否必须 |
-|------|---------|------|---------|
-| Python | 3.11 | 后端运行时 | 是 |
-| Node.js | 20.x LTS | 前端运行时 | 是 |
-| npm | 随 Node 安装 | 包管理 | 是 |
-| Docker Desktop | 24.0 | 运行 PostgreSQL + Redis | 强烈推荐 |
-| Git | 任意现代版 | 版本管理 | 是 |
-| PostgreSQL | 15 | 主数据库 | 是（Docker 提供） |
-| Redis | 7.0 | 缓存 + Job Store | 是（Docker 提供） |
-| Kafka | - | MVP **不需要**，Phase 3 才引入 | 否 |
-
-### H. 当前阻塞点（按优先级）
-
-1. **最大阻塞**：缺少 `backend/main.py`、`backend/requirements.txt`、`frontend/package.json`、`docker-compose.yml`、`.env.example`，项目完全无法启动。
-2. **Git 边界问题**：当前 Git 根是 `C:\Users\hp`（用户主目录），会把整个用户主目录和桌面文件纳入追踪。需要在项目目录 `C:\Users\hp\Desktop\Decypher AI` 初始化独立 Git 仓库。
-3. **`.gitignore` 为空**：有提交 `.env`（真实 API Key）、`.venv`、`node_modules`、`.next` 等的风险。
-4. **文档与现实不符**：`tasks/todo.md` 标记 `.env.example` 和 `docker-compose.yml` 为已完成，但文件不存在。
-5. **`.env` 加载路径**：`.env` 在项目根，后端在 `backend/` 子目录启动，需要明确加载路径策略。
+| 模块                  | 文件                                 | 状态                                         |
+| --------------------- | ------------------------------------ | -------------------------------------------- |
+| Next.js 14 App Router | `src/app/`                           | ✅ 完整路由结构                              |
+| 新版 Stitch 设计系统  | `tailwind.config.ts` + `globals.css` | ✅ 亮色主题完成                              |
+| AppShell 侧边栏       | `AppShell.tsx`                       | ✅ 亮色 Stitch 风格                          |
+| 登录/注册页           | `(auth)/login/page.tsx`              | ✅ 完整                                      |
+| Dashboard 主页        | `dashboard/page.tsx`                 | ✅ Bento Grid + 顶导栏                       |
+| 任务管理页            | `tasks/page.tsx`                     | ✅ 完整 CRUD                                 |
+| 机会收藏页            | `saved/page.tsx`                     | ✅ 带搜索过滤                                |
+| Chat 分析页           | `chat/page.tsx`                      | ✅ AI Analyst 双栏布局                       |
+| OpportunityCard       | `dashboard/OpportunityCard.tsx`      | ✅ Stitch 风格                               |
+| TaskCard              | `dashboard/TaskCard.tsx`             | ✅ 完整                                      |
+| Zustand 状态          | `store/index.ts`                     | ✅ useAuthStore                              |
+| API 客户端            | `lib/api.ts`                         | ✅ Axios + 拦截器                            |
+| 自定义 Hooks          | `hooks/`                             | ✅ useAuth/useTasks/useOpportunities/useChat |
 
 ---
 
-## 二、项目地图（模块职责说明）
+### ⚠️ 缺口分析（未实现 / 需要扩展）
 
-### 阅读顺序 1：项目总入口与业务目标
+对照完整产品愿景，以下功能**目前还不存在**：
 
-用户从浏览器进入 Next.js 前端，通过 Chat UI / Dashboard / Task Manager 操作；前端通过 REST API + SSE 调用 FastAPI 后端。
+#### 后端缺口
 
-来源：`docs/architecture.md`、`CLAUDE.md`
+| 缺失功能                  | 重要程度 | 说明                                                                                 |
+| ------------------------- | -------- | ------------------------------------------------------------------------------------ |
+| **5 个模块分类**          | 🔴 高    | 现在所有机会都是同一种类型，没有 category 字段                                       |
+| **arXiv 采集器**          | 🔴 高    | 学术研究模块的核心数据源                                                             |
+| **SEC EDGAR 采集器**      | 🟡 中    | 股市模块                                                                             |
+| **Product Hunt 采集器**   | 🟡 中    | 商业市场和创业机会模块                                                               |
+| **OpenAlex 采集器**       | 🟡 中    | 学术研究                                                                             |
+| **Stack Exchange 采集器** | 🟡 中    | 求职热点                                                                             |
+| **RAG 向量检索**          | 🔴 高    | Chat 当前直接传 opportunity 文本，没有向量数据库检索相关信号                         |
+| **卡片表（cards）**       | 🔴 高    | 现在 opportunity = card，但业务上需要独立的 Card 实体，含 category/tags/is_favorited |
+| **实体抽取**              | 🟡 中    | 无公司/技术/岗位实体识别                                                             |
+| **用户收藏/点赞**         | 🟡 中    | 有 UI 按钮，但没有后端接口和数据表                                                   |
+| **报告生成**              | 🟡 中    | ReportAgent 尚未实现                                                                 |
+| **对话持久化**            | 🟡 中    | Chat 消息不保存，刷新后消失                                                          |
+| **多 Agent 分工**         | 🟠 低    | 当前只有一个 analysis_service，没有 MarketAgent/ResearchAgent 等                     |
+| **定时任务分模块**        | 🟠 低    | 所有采集任务用统一间隔，没有按模块差异化调度                                         |
 
-### 阅读顺序 2：前端页面入口
+#### 前端缺口
 
-设计入口在 `frontend/src/app/`：
-
-| 文件 | 职责 | 当前状态 |
-|------|------|---------|
-| `page.tsx` | 首页，重定向到 `/dashboard` 或 `/login` | 空 |
-| `(auth)/login/page.tsx` | 登录/注册（Tab 切换） | 空 |
-| `dashboard/page.tsx` | 仪表盘（任务列表 + 最新机会） | 空 |
-| `chat/page.tsx` | AI 对话页（流式打字机效果） | 空 |
-| `layout.tsx` | 根布局（字体、Toast Provider） | 空 |
-
-来源：`docs/architecture.md`、`frontend/src/app/**`
-
-### 阅读顺序 3：前端 API 调用层
-
-所有 HTTP 请求必须通过 `frontend/src/lib/api.ts`。组件禁止直接 `fetch()`。
-
-- Axios 实例 + 请求/响应拦截器（自动附加 Authorization header）
-- 导出：`authAPI`、`taskAPI`、`opportunityAPI`、`chatAPI`
-
-来源：`docs/architecture.md`、`.claude/rules/code-style.md`
-
-### 阅读顺序 4：后端入口与路由
-
-请求通过 `backend/main.py` 进入，路由前缀 `/api/v1/`，健康检查 `/health`。
-
-`backend/app/api/deps.py` 提供两个核心依赖注入：
-- `get_db()`：注入 `AsyncSession`
-- `get_current_user()`：解析 JWT，返回当前用户
-
-来源：`docs/api-design.md`、`docs/architecture.md`
-
-### 阅读顺序 5：路由层（只做参数校验 + 调用 service + 返回）
-
-| 文件 | 负责接口 |
-|------|---------|
-| `api/v1/auth.py` | POST /register、POST /login、GET /me |
-| `api/v1/tasks.py` | CRUD + POST /{id}/run |
-| `api/v1/opportunities.py` | GET 列表（支持 task_id 过滤）+ GET 详情 |
-| `api/v1/signals.py` | 原始信号（占位，后期实现） |
-| `api/v1/chat.py` | POST /stream（SSE）+ POST /message |
-
-来源：`docs/architecture.md`、`docs/api-design.md`
-
-### 阅读顺序 6：业务逻辑层（services/）
-
-| 文件 | 职责 |
-|------|------|
-| `analysis_service.py` | 信号文本 → 调用 OpenAI/DeepSeek → 结构化机会 JSON |
-| `chat_service.py` | AI 对话，支持 stream 和非 stream 模式 |
-| `base_data_service.py` | 数据采集公共基类，定义 `search()` 接口 |
-| `github_service.py` | GitHub API（Token 认证，60 → 5000次/小时） |
-| `hn_service.py` | Hacker News（Algolia API，无需认证） |
-| `reddit_service.py` | Reddit（OAuth2，MVP 阶段为占位实现） |
-
-来源：`docs/architecture.md`
-
-### 阅读顺序 7：数据模型层
-
-| 文件 | 对应数据库表 |
-|------|------------|
-| `database.py` | AsyncEngine 工厂 + `get_db()` + `init_db()` |
-| `models/user.py` | `users` 表 |
-| `models/task.py` | `tasks` 表 + `TaskStatus` 枚举 |
-| `models/opportunity.py` | `opportunities` 表（含 5 维评分字段） |
-
-数据关系：`users` 1:N `tasks` 1:N `opportunities`。
-
-来源：`docs/database-schema.md`、`docs/architecture.md`
-
-### 阅读顺序 8：后台 Pipeline（workers/）
-
-三层顺序执行：
-
-```
-orchestrator.py
-  └─ 调用 collector.py   → 并发采集各 service 原始数据 → List[RawSignal]
-  └─ 调用 processor.py   → 去重、清洗、格式化 → signals_text
-  └─ 调用 analysis_service → OpenAI 分析 → opportunities JSON
-  └─ 写入数据库，更新 task 状态
-```
-
-由 `core/scheduler.py`（APScheduler）定时触发，或 `POST /tasks/{id}/run` 手动触发。
-
-来源：`docs/architecture.md`
-
-### 阅读顺序 9：基础设施层（core/）
-
-| 文件 | 职责 |
-|------|------|
-| `core/security.py` | JWT 生成/验证（python-jose HS256）+ bcrypt 密码哈希（passlib） |
-| `core/scheduler.py` | APScheduler 管理器，封装 add/remove/pause/resume job |
-
-来源：`docs/architecture.md`、`docs/tech-stack.md`
-
-### 阅读顺序 10：配置层（config.py）
-
-`pydantic-settings` 的 `Settings` 类，从 `.env` 读取所有环境变量。
-
-**重要**：由于后端从 `backend/` 目录启动，读取 `.env` 时需要指定路径 `../. env`（相对于 `backend/`），或在启动脚本中切换到项目根目录。
+| 缺失功能              | 重要程度 | 说明                                                     |
+| --------------------- | -------- | -------------------------------------------------------- |
+| **五模块 Tab 切换**   | 🔴 高    | 顶导栏有 Tab，但点击无实际过滤效果                       |
+| **卡片选中→右侧联动** | 🔴 高    | 点卡片后右侧 AI Analyst 自动读取，是核心交互，当前未实现 |
+| **收藏/点赞按钮功能** | 🟡 中    | UI 有按钮，无实际 API 调用                               |
+| **Notes（笔记）功能** | 🟡 中    | 导航有 Notes，页面不存在                                 |
+| **卡片翻转动效**      | 🟠 低    | 每张卡片的翻转按钮                                       |
+| **周报页面**          | 🟠 低    | 报告功能尚未设计                                         |
+| **移动端适配**        | 🟠 低    | 底部 nav 存在但不完善                                    |
 
 ---
 
-## 三、Windows 本地开发环境安装方案
+## 五、数据库扩展方案
 
-> 所有命令均为 **PowerShell** 语法（Windows 11 环境）。
+在现有 `users`、`tasks`、`opportunities` 三张表基础上，需要新增：
 
-### 1. Docker 优先方案（推荐）
+### 新增核心表
 
-Docker 负责 PostgreSQL + Redis；本机负责 Python 后端和 Node 前端。
+```sql
+-- ── 信息卡片表（核心展示单元）─────────────────────────────────
+CREATE TABLE cards (
+    id              SERIAL PRIMARY KEY,
+    user_id         INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    -- 可以是 AI 生成（绑 opportunity）或系统自动生成（绑 item）
+    opportunity_id  INTEGER REFERENCES opportunities(id) ON DELETE SET NULL,
+    category        VARCHAR(50) NOT NULL,   -- 'market' | 'research' | 'startup' | 'stocks' | 'jobs'
+    title           VARCHAR(300) NOT NULL,
+    summary         TEXT NOT NULL,
+    score           FLOAT NOT NULL DEFAULT 0.0,
+    tags            JSONB NOT NULL DEFAULT '[]',
+    source          VARCHAR(100),           -- 'github' | 'hackernews' | 'arxiv' | ...
+    detail_analysis TEXT,                   -- AI 深度分析全文
+    risk_notes      TEXT,
+    next_steps      TEXT,
+    is_favorited    BOOLEAN NOT NULL DEFAULT FALSE,
+    like_count      INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_cards_category ON cards(category);
+CREATE INDEX idx_cards_score ON cards(score DESC);
+CREATE INDEX idx_cards_user_id ON cards(user_id);
 
-**需要安装：**
+-- ── 原始信号/数据项表 ────────────────────────────────────────
+CREATE TABLE items (
+    id              SERIAL PRIMARY KEY,
+    source          VARCHAR(50) NOT NULL,   -- 'github' | 'hackernews' | 'arxiv' | 'sec' | ...
+    category        VARCHAR(50),            -- 哪个模块使用
+    external_id     VARCHAR(200),           -- 原始 ID（避免重复抓取）
+    title           VARCHAR(500) NOT NULL,
+    body            TEXT,
+    url             VARCHAR(2000),
+    author          VARCHAR(200),
+    score           INTEGER DEFAULT 0,      -- stars/upvotes/citations
+    content_hash    VARCHAR(64) UNIQUE,     -- SHA256 去重
+    published_at    TIMESTAMPTZ,
+    fetched_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_items_source ON items(source);
+CREATE INDEX idx_items_category ON items(category);
+CREATE INDEX idx_items_content_hash ON items(content_hash);
 
-| 工具 | 来源 | 说明 |
-|------|------|------|
-| Git | git-scm.com | 版本管理，必须 |
-| Python 3.11+ | python.org | 安装时勾选 "Add Python to PATH" |
-| Node.js 20 LTS | nodejs.org | 随附 npm |
-| Docker Desktop 24+ | docker.com | 启用 WSL 2 backend |
+-- ── 实体表 ──────────────────────────────────────────────────
+CREATE TABLE entities (
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(200) NOT NULL,
+    type        VARCHAR(50) NOT NULL,    -- 'company' | 'technology' | 'job_role' | 'paper_topic' | 'product'
+    aliases     JSONB DEFAULT '[]',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-**安装顺序：**
+-- ── 用户收藏表 ───────────────────────────────────────────────
+CREATE TABLE user_favorites (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    card_id     INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, card_id)
+);
 
-```powershell
-# 验证已安装工具版本
-git --version
-python --version      # 期望 >= 3.11
-node --version        # 期望 >= 20
-npm --version
-docker --version      # 期望 >= 24
-docker compose version
-```
+-- ── 聊天会话表 ───────────────────────────────────────────────
+CREATE TABLE chat_sessions (
+    id              SERIAL PRIMARY KEY,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    card_id         INTEGER REFERENCES cards(id) ON DELETE SET NULL,
+    messages        JSONB NOT NULL DEFAULT '[]',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-**常见报错：**
+-- ── 报告表 ──────────────────────────────────────────────────
+CREATE TABLE reports (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type        VARCHAR(50) NOT NULL,   -- 'weekly' | 'startup' | 'company' | 'learning_path'
+    title       VARCHAR(300) NOT NULL,
+    content     TEXT NOT NULL,
+    metadata    JSONB DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-| 错误 | 原因 | 解决 |
-|------|------|------|
-| `python is not recognized` | Python 未加入 PATH | 重装时勾选 "Add Python to PATH" |
-| `node is not recognized` | Node.js 未加入 PATH | 重启 PowerShell 或刷新 PATH |
-| `docker: command not found` | Docker Desktop 未安装或未启动 | 启动 Docker Desktop |
-| `Cannot connect to Docker daemon` | WSL integration 未启用 | Docker Desktop → Settings → WSL integration |
-| 端口冲突 | 5432/6379/8000/3000 被占用 | 检查并关闭冲突进程 |
-
-### 2. 前后端启动命令（当前不可执行，等待依赖文件创建后使用）
-
-**后端启动流程（PowerShell）：**
-
-```powershell
-# 进入后端目录
-cd backend
-
-# 创建并激活虚拟环境
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-
-# 安装依赖
-pip install -r requirements.txt
-
-# 启动后端（从 backend/ 目录执行，main.py 在此目录）
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-**后端验证（PowerShell）：**
-
-```powershell
-# PowerShell 中用 Invoke-RestMethod 替代 curl
-Invoke-RestMethod http://localhost:8000/health
-# 或使用 curl.exe（注意区分 PowerShell 的 curl 别名）
-curl.exe http://localhost:8000/health
-```
-
-期望返回：
-
-```json
-{"status": "healthy", "service": "Decypher AI Backend", "version": "0.1.0"}
-```
-
-**前端启动流程（PowerShell）：**
-
-```powershell
-# 进入前端目录
-cd frontend
-
-# 安装依赖
-npm install
-
-# 启动前端开发服务器
-npm run dev
-```
-
-**前端验证：** 浏览器打开 `http://localhost:3000`，应看到 Decypher AI 首页或登录页。
-
-### 3. Docker Compose 启动数据库（等待 docker-compose.yml 创建后使用）
-
-```powershell
-# 在项目根目录执行
-docker compose up -d postgres redis
-docker compose ps
-```
-
-期望 `postgres` 和 `redis` 服务均显示 `running` 或 `healthy`。
-
-**失败排查：**
-
-- Docker Desktop 未启动
-- 端口 5432 或 6379 被本机其他服务占用
-- `.env` 中 `DECYPHER_DATABASE_URL` 的账号密码与 `docker-compose.yml` 配置不一致
-
-### 4. 原生安装方案（仅在 Docker 不可用时）
-
-直接在 Windows 上安装 PostgreSQL 15 for Windows 和 Redis（建议通过 WSL2 的 Ubuntu 安装 Redis，因为 Windows 原生 Redis 长期无官方维护）。
-
-不推荐原因：环境更容易与端口、权限、服务注册冲突，后续复现困难。
-
----
-
-## 四、环境变量与密钥梳理
-
-当前环境变量来源是项目根目录 `.env`。代码中无读取实现（`backend/app/config.py` 为空）；文档设计由 `pydantic-settings` 读取。
-
-来源：`.env`、`docs/architecture.md`、`docs/tech-stack.md`
-
-### 1. 环境变量完整表
-
-| 变量名 | 是否必须 | 类别 | 用途 | 是否需手动提供 |
-|--------|---------|------|------|-------------|
-| `DECYPHER_APP_ENV` | 可选 | 应用配置 | 运行环境（development / production） | 否，默认 development |
-| `DECYPHER_SECRET_KEY` | **必须** | JWT 安全 | JWT 签名密钥，生产必须随机生成 | **是** |
-| `DECYPHER_DEBUG` | 可选 | 应用配置 | Debug 开关，生产必须 false | 否，默认 false |
-| `DECYPHER_ALLOWED_ORIGINS` | **必须** | CORS 配置 | 允许跨域的源，本地开发填 `http://localhost:3000` | **是** |
-| `DECYPHER_DATABASE_URL` | **必须** | 数据库 | PostgreSQL 连接串，格式 `postgresql+asyncpg://user:pass@host:port/db` | **是** |
-| `DECYPHER_REDIS_URL` | **必须** | Redis | Redis 连接串，格式 `redis://host:port/db` | **是** |
-| `OPENAI_API_KEY` | **必须** | AI 服务 | OpenAI API Key（主 AI 服务） | **是** |
-| `OPENAI_MODEL` | 可选 | AI 服务 | OpenAI 模型名，默认 `gpt-4o-mini` | 否 |
-| `OPENAI_MAX_TOKENS` | 可选 | AI 服务 | 最大 token 数，默认 4096 | 否 |
-| `DEEPSEEK_API_KEY` | 条件必须 | AI 服务 | DeepSeek API Key（备用，启用时必须） | 是，若用 DeepSeek |
-| `DEEPSEEK_MODEL` | 可选 | AI 服务 | DeepSeek 模型名，默认 `deepseek-chat` | 否 |
-| `DECYPHER_AI_PROVIDER` | **必须** | AI 服务 | 切换主 AI 服务：`openai` 或 `deepseek` | **是** |
-| `GITHUB_TOKEN` | 条件必须 | 数据采集 | GitHub Personal Access Token（未认证限 60次/小时，认证后 5000次/小时） | 是，若启用 GitHub 采集 |
-| `REDDIT_CLIENT_ID` | 条件必须 | 数据采集 | Reddit OAuth2 App Client ID | 是，若启用 Reddit |
-| `REDDIT_CLIENT_SECRET` | 条件必须 | 数据采集 | Reddit OAuth2 App Client Secret | 是，若启用 Reddit |
-| `REDDIT_USER_AGENT` | 条件必须 | 数据采集 | Reddit API User-Agent 字符串 | 是，若启用 Reddit |
-| `NEXT_PUBLIC_API_URL` | **必须** | 前端配置 | 前端调用后端的基础 URL，本地 `http://localhost:8000` | **是** |
-| `NEXT_PUBLIC_APP_NAME` | 可选 | 前端配置 | 应用显示名称，默认 `Decypher AI` | 否 |
-| `NEXT_PUBLIC_APP_VERSION` | 可选 | 前端配置 | 前端版本号 | 否 |
-| `DECYPHER_DEFAULT_TASK_INTERVAL` | 可选 | 任务配置 | 默认任务执行间隔（秒），默认 3600 | 否 |
-| `DECYPHER_MAX_CONCURRENT_TASKS` | 可选 | 任务配置 | 最大并发任务数，默认 5 | 否 |
-| `DECYPHER_RATE_LIMIT_PER_MINUTE` | 可选 | API 配置 | 每分钟速率限制，默认 60 | 否 |
-
-**注意：** 对象存储（S3/OSS/MinIO）在 MVP 阶段不需要，原始信号数据不持久化，每次重新采集。Kafka 不需要，MVP 使用 APScheduler。
-
-### 2. 本地开发最小必填集合
-
-开发启动只需提供：
-
-```
-DECYPHER_SECRET_KEY=<任意随机字符串，开发可用 "dev-secret">
-DECYPHER_DATABASE_URL=postgresql+asyncpg://decypher:decypher123@localhost:5432/decypher_db
-DECYPHER_REDIS_URL=redis://localhost:6379/0
-OPENAI_API_KEY=<真实 OpenAI Key>
-DECYPHER_AI_PROVIDER=openai
-DECYPHER_ALLOWED_ORIGINS=http://localhost:3000
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-GitHub + Reddit 采集功能在未填写对应 Key 时可降级为空列表返回，不影响核心启动。
-
----
-
-## 五、`.env.example` 草案
-
-> 注意：以下只是草案，不代表已创建 `.env.example` 文件。所有值均为占位示例，不含任何真实密钥。
-
-```env
-# ── 应用配置 ──────────────────────────────────────────
-DECYPHER_APP_ENV=development
-DECYPHER_SECRET_KEY=change-me-to-a-random-secret-key
-DECYPHER_DEBUG=true
-DECYPHER_ALLOWED_ORIGINS=http://localhost:3000
-
-# ── 数据库 ────────────────────────────────────────────
-DECYPHER_DATABASE_URL=postgresql+asyncpg://decypher:decypher@localhost:5432/decypher_db
-
-# ── Redis ─────────────────────────────────────────────
-DECYPHER_REDIS_URL=redis://localhost:6379/0
-
-# ── OpenAI（主 AI 服务）────────────────────────────────
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_MAX_TOKENS=4096
-
-# ── DeepSeek（备用 AI 服务）────────────────────────────
-DEEPSEEK_API_KEY=
-DEEPSEEK_MODEL=deepseek-chat
-DECYPHER_AI_PROVIDER=openai
-
-# ── GitHub 数据采集 ────────────────────────────────────
-GITHUB_TOKEN=
-
-# ── Reddit 数据采集 ────────────────────────────────────
-REDDIT_CLIENT_ID=
-REDDIT_CLIENT_SECRET=
-REDDIT_USER_AGENT=DecypherAI/0.1.0
-
-# ── 前端配置 ──────────────────────────────────────────
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_APP_NAME=Decypher AI
-NEXT_PUBLIC_APP_VERSION=0.1.0
-
-# ── 任务与限流配置 ─────────────────────────────────────
-DECYPHER_DEFAULT_TASK_INTERVAL=3600
-DECYPHER_MAX_CONCURRENT_TASKS=5
-DECYPHER_RATE_LIMIT_PER_MINUTE=60
+-- ── 向量嵌入（pgvector 支持后启用）──────────────────────────
+-- CREATE EXTENSION IF NOT EXISTS vector;
+-- ALTER TABLE items ADD COLUMN embedding vector(384);
+-- CREATE INDEX idx_items_embedding ON items USING ivfflat (embedding vector_cosine_ops);
 ```
 
 ---
 
-## 六、后续落地顺序
+## 六、新增数据采集器
 
-> 以下是完整的最小可运行落地步骤。每步完成后等待确认再执行下一步。
+在 `backend/app/services/` 下新增以下 Collector，继承 `BaseDataService`：
 
-### 阶段 0：修复环境基础（不写业务代码）
+### 6.1 arXiv 采集器（学术研究）
 
-**步骤 0.1 — 初始化项目 Git 仓库**
-
-当前 Git 根是 `C:\Users\hp`（用户主目录），需要在项目目录创建独立 Git 仓库。
-
-操作（需用户确认后执行）：
-1. 在 `C:\Users\hp\Desktop\Decypher AI` 内执行 `git init`
-2. 确认 `.git/` 创建在正确位置
-
-**步骤 0.2 — 补全 `.gitignore`**
-
-必须忽略：`.env`、`.venv`、`node_modules`、`.next`、`__pycache__`、`*.pyc`、`.pytest_cache`、`dist`、`build`、`*.log`、`.DS_Store`
-
-**步骤 0.3 — 创建 `.env.example`**
-
-从第五节草案生成，只填占位值，不复制真实密钥。
-
-**步骤 0.4 — 创建 `docker-compose.yml`**
-
-只包含 PostgreSQL 15 和 Redis 7，端口映射与 `.env` 一致（5432 / 6379），账号密码与 `DECYPHER_DATABASE_URL` 一致。
-
-### 阶段 1：后端最小可运行（`GET /health` 能访问）
-
-**文件创建顺序：**
-
-1. `backend/requirements.txt`（锁定所有依赖版本）
-2. `backend/app/config.py`（pydantic-settings Settings 类，含 `.env` 加载路径）
-3. `backend/app/database.py`（AsyncEngine + AsyncSession + `init_db()`）
-4. `backend/main.py`（FastAPI 实例 + lifespan + CORS + 路由注册 + `/health`）
-
-**验证标准：**
-```powershell
-cd backend
-.venv\Scripts\Activate.ps1
-uvicorn main:app --reload --port 8000
-# 新终端：
-Invoke-RestMethod http://localhost:8000/health
-# 返回 {"status":"healthy",...}
+```python
+# arxiv_service.py
+# API: http://export.arxiv.org/api/query?search_query=...
+# 返回最新论文 title + abstract
+# 字段映射：title→title, abstract→body, arxiv_id→url
 ```
 
-### 阶段 2：用户认证模块（P0）
+### 6.2 OpenAlex 采集器（学术研究增强）
 
-遵循 `workflow.md` 定义的开发顺序：**Model → Schema → Service → API Route → Test**
+```python
+# openalex_service.py
+# API: https://api.openalex.org/works?filter=title.search:...
+# 可获取引用量、机构、领域分类
+```
 
-1. `backend/app/models/user.py` → 验证：表结构正确创建
-2. `backend/app/schemas/__init__.py`（`UserCreate`、`UserOut`、`TokenOut`、`APIResponse`）→ 验证：Pydantic 校验通过
-3. `backend/app/core/security.py`（JWT 生成/验证 + bcrypt）→ 验证：单元测试通过
-4. `backend/app/api/deps.py`（`get_db`、`get_current_user`）
-5. `backend/app/api/v1/auth.py`（POST /register、POST /login、GET /me）→ 验证：接口测试通过
-6. `backend/tests/test_auth.py`（成功注册 + 登录 + 未认证 401）
+### 6.3 Product Hunt 采集器（商业/创业）
 
-**完成标准：** `pytest tests/test_auth.py -v` 全绿。
+```python
+# producthunt_service.py
+# API: https://api.producthunt.com/v2/api/graphql
+# 需要 API Token
+# 抓取 today's products、投票数、标签
+```
 
-### 阶段 3：任务 CRUD + APScheduler（P0）
+### 6.4 SEC EDGAR 采集器（股市）
 
-遵循 Model → Schema → Service → API Route → Test 顺序：
+```python
+# sec_service.py
+# API: https://data.sec.gov/submissions/CIK{cik}.json
+# API: https://efts.sec.gov/LATEST/search-index?q=...
+# 抓取 8-K (重大事件)、10-Q (季报) 摘要
+# 注意：只做研究，prompt 中明确禁止写买卖建议
+```
 
-1. `backend/app/models/task.py`（含 `TaskStatus` 枚举）
-2. `backend/app/schemas/__init__.py`（追加 `TaskCreate`、`TaskOut`、`TaskUpdate`）
-3. `backend/app/core/scheduler.py`（APScheduler 管理器，Redis Job Store）
-4. `backend/app/api/v1/tasks.py`（CRUD + POST /{id}/run）
-5. `backend/tests/test_tasks.py`
+### 6.5 Stack Exchange 采集器（求职/技术热点）
 
-**完成标准：** `pytest tests/test_tasks.py -v` 全绿，`POST /api/v1/tasks` 能创建任务并触发 APScheduler Job。
-
-### 阶段 4：前端最小可运行（登录页面能访问）
-
-1. `frontend/package.json` + `frontend/next.config.ts` + `frontend/tsconfig.json` + `frontend/tailwind.config.ts` + `frontend/postcss.config.mjs`
-2. `frontend/src/app/globals.css`（Tailwind 基础样式）
-3. `frontend/src/app/layout.tsx`（根布局）
-4. `frontend/src/app/(auth)/login/page.tsx`（最小登录页）
-5. `frontend/src/types/index.ts`（TypeScript 类型定义）
-6. `frontend/src/lib/api.ts`（Axios 实例 + `authAPI`）
-7. `frontend/src/store/index.ts`（auth store）
-8. `frontend/src/hooks/useAuth.ts`
-
-**验证标准：** 浏览器打开 `http://localhost:3000/login`，登录表单可见，能调用后端 `/api/v1/auth/login`。
-
-### 阶段 5：数据采集 + AI Pipeline（P1）
-
-按 Model → Schema → Service → API Route → Test 顺序：
-
-1. `backend/app/models/opportunity.py`
-2. `backend/app/schemas/__init__.py`（追加 `OpportunityOut`）
-3. `backend/app/services/base_data_service.py`（基类）
-4. `backend/app/services/github_service.py`（`search_issues`、`search_repos`）
-5. `backend/app/services/hn_service.py`（`search`）
-6. `backend/app/services/reddit_service.py`（占位实现）
-7. `backend/app/workers/collector.py`
-8. `backend/app/workers/processor.py`
-9. `backend/app/services/analysis_service.py`（OpenAI 调用 + JSON 解析）
-10. `backend/app/workers/orchestrator.py`（组合 + 存库）
-11. `backend/app/api/v1/opportunities.py`
-12. `backend/tests/test_ai_service.py`（Mock OpenAI）
-13. `backend/tests/test_data_service.py`（Mock httpx）
-
-### 阶段 6：SSE 聊天接口 + 前端 Dashboard（P1）
-
-1. `backend/app/services/chat_service.py`（stream + 非 stream）
-2. `backend/app/api/v1/chat.py`（POST /stream SSE + POST /message）
-3. 前端 Dashboard 组件（TaskCard、OpportunityCard、CreateTaskModal）
-4. 前端 Chat 组件（ChatWindow、ChatMessage、ChatInput）
-5. 前后端对接与集成测试
-
-### 阶段 7：CI/CD 与部署（P2/P3）
-
-1. GitHub Actions 工作流（后端测试 + 前端 lint + type-check）
-2. Vercel 部署前端（设置环境变量）
-3. Railway 部署后端 + PostgreSQL + Redis
+```python
+# stackexchange_service.py
+# API: https://api.stackexchange.com/2.3/questions?tagged=...
+# 抓取热门问题、投票数、回答数
+```
 
 ---
 
-## 七、执行边界
+## 七、新增 AI Agents
 
-本文档为分析与规划文档，**不包含任何代码实现**。
+在 `backend/app/services/agents/` 下实现各专业 Agent，每个 Agent 本质是带专用 System Prompt 的 `chat_completion` 封装：
 
-未执行的事项：
+### Agent 分工表
 
-- 未修改任何业务代码文件
-- 未覆盖或修改 `.env`
-- 未创建 `.env.example`
-- 未创建 `docker-compose.yml`
-- 未安装 Python 依赖
-- 未安装 Node 依赖
-- 未启动 Docker
-- 未启动数据库
-- 未启动 Redis
-- 未执行数据库迁移
-- 未初始化项目 Git 仓库
-- 未执行任何 git commit
+| Agent 文件              | 职责               | 核心 Prompt 侧重                         |
+| ----------------------- | ------------------ | ---------------------------------------- |
+| `market_agent.py`       | 商业市场分析       | 行业动态、产品发布、市场机会、竞品       |
+| `research_agent.py`     | 学术研究分析       | 论文总结、研究方向聚类、paper-to-project |
+| `startup_agent.py`      | 创业机会分析       | MVP 建议、商业模式、市场进入策略         |
+| `stock_pulse_agent.py`  | 股市公开信息       | 财报摘要、AI 暴露度、新闻情绪分析        |
+| `job_market_agent.py`   | 求职热点分析       | 技能需求、岗位趋势、学习路线             |
+| `report_agent.py`       | 报告生成           | 周报、公司研究、学习路线报告             |
+| `chat_agent.py`         | 对话分析（RAG 版） | 当前选中卡片 + 向量检索相关 items        |
+| `orchestrator_agent.py` | 总调度             | 决定哪个 Agent 先跑、什么时候评分        |
 
-下一步行动：确认本报告准确无误后，从**阶段 0（修复环境基础）**开始，按顺序逐步执行。每个阶段完成后等待确认再进行下一阶段。
+### RAG Chat 增强方案
+
+```python
+# chat_agent.py 核心逻辑（RAG 版）
+async def reply_with_rag(message, card, history, db):
+    # 1. 向量化用户问题
+    query_vector = embedder.encode(message)
+
+    # 2. pgvector 检索相关 items（Top-K = 5）
+    related_items = await db.execute(
+        "SELECT * FROM items ORDER BY embedding <-> $1 LIMIT 5",
+        [query_vector]
+    )
+
+    # 3. 组合 Prompt
+    context = f"""
+    当前选中卡片：{card.title}
+    卡片摘要：{card.summary}
+    相关数据来源：
+    {format_items(related_items)}
+    """
+
+    # 4. LLM 生成回答（含结论、原因、数据来源、风险、建议）
+    return await chat_completion([
+        {"role": "system", "content": ANALYST_SYSTEM_PROMPT},
+        {"role": "user", "content": context},
+        ...history,
+        {"role": "user", "content": message}
+    ])
+```
+
+---
+
+## 八、前端核心交互升级
+
+### 8.1 五模块 Tab 切换（最高优先级）
+
+Dashboard 顶导栏的 Tab 点击需要：
+
+```typescript
+// dashboard/page.tsx 需要增加
+const [activeModule, setActiveModule] = useState<Module>("market");
+
+// API 查询带 category 过滤
+const { cards } = useCards({ category: activeModule, limit: 6 });
+```
+
+后端需要新增 `/api/v1/cards` 接口，支持 `?category=` 过滤。
+
+### 8.2 卡片选中 → 右侧联动（核心交互）
+
+这是整个产品最核心的 UX：
+
+```typescript
+// 全局状态需要新增 selectedCard
+interface SelectedCardState {
+  selectedCard: Card | null;
+  setSelectedCard: (card: Card | null) => void;
+}
+
+// OpportunityCard 点击后：
+<article onClick={() => setSelectedCard(card)}
+  className={`... ${isSelected ? "selected-glow" : ""}`}
+>
+
+// 右侧 AI Analyst 监听 selectedCard：
+// 当 selectedCard 改变时，自动显示该卡片摘要 + 评分
+// 用户点"Analyze"时，发起 chat 请求带上 card_id
+```
+
+### 8.3 Notes 笔记页
+
+路径：`/notes`  
+功能：用户在 AI 对话中生成的洞察，可以手动保存为笔记。  
+后端：`POST /api/v1/notes`，数据存 `reports` 表的 `type='note'`。
+
+### 8.4 收藏 & 点赞
+
+```typescript
+// 每张卡片的 favorite 按钮：
+const handleFavorite = async (cardId: number) => {
+  await cardAPI.toggleFavorite(cardId);
+  // 后端：POST /api/v1/cards/{id}/favorite
+};
+```
+
+---
+
+## 九、分阶段开发路线图
+
+### Phase 1 — 完善核心闭环（1-2 周）
+
+> 目标：让现有功能跑通完整产品闭环
+
+**后端：**
+
+- [ ] Opportunity 模型增加 `category` 字段（迁移现有数据 → 默认值 "startup"）
+- [ ] 新增 `/api/v1/cards` 接口，支持 `?category=market|research|startup|stocks|jobs` 过滤
+- [ ] 新增 `POST /api/v1/cards/{id}/favorite` 和 `POST /api/v1/cards/{id}/like`
+- [ ] 新增 `user_favorites` 表
+- [ ] Reddit 采集器完整实现（PRAW 库）
+
+**前端：**
+
+- [ ] Dashboard 顶导五 Tab 真实切换（调用 `useCards({ category })`）
+- [ ] 全局状态新增 `selectedCard` → 点卡片高亮 + 右侧 AI Analyst 联动
+- [ ] 收藏/点赞按钮接入真实 API
+- [ ] ChatWindow 聊天记录 `localStorage` 持久化（临时方案）
+
+---
+
+### Phase 2 — 多模块数据源扩展（2-3 周）
+
+> 目标：让每个模块有专属数据
+
+**后端：**
+
+- [ ] `arxiv_service.py` — arXiv API 采集（学术研究）
+- [ ] `producthunt_service.py` — Product Hunt GraphQL（商业/创业）
+- [ ] `sec_service.py` — SEC EDGAR 财报（股市，仅研究）
+- [ ] `stackexchange_service.py` — Stack Exchange 热门问题（求职）
+- [ ] `openalex_service.py` — OpenAlex 论文检索（学术增强）
+- [ ] 任务调度分模块：arXiv 每 12h，SEC 每天，GitHub/HN 每 6h
+- [ ] 各模块专用 System Prompt：`market_agent`、`research_agent`、`startup_agent`、`stock_pulse_agent`、`job_market_agent`
+
+**前端：**
+
+- [ ] 每个模块的卡片展示逻辑（标签、图标、分数权重）适配各模块数据
+- [ ] 模块切换时的 Loading 状态和空状态优化
+
+---
+
+### Phase 3 — AI 能力增强（3-4 周）
+
+> 目标：让 AI Analyst 真正"懂"上下文
+
+**后端：**
+
+- [ ] `items` 表上线（存储原始信号，不依附于 Task）
+- [ ] 向量化模块：`sentence-transformers` + 存入 `items.embedding`
+- [ ] `pgvector` 扩展启用（PostgreSQL）
+- [ ] RAG Chat：用户提问 → 向量检索相关 items → 丰富 prompt → LLM 回答
+- [ ] 实体抽取：从 item 正文识别公司、技术、岗位名词（spaCy 或 LLM 辅助）
+- [ ] 聊天会话持久化：`chat_sessions` 表，`GET /api/v1/chat/sessions`
+- [ ] `report_agent.py`：生成周报（`POST /api/v1/reports/weekly`）
+
+**前端：**
+
+- [ ] 笔记页 `/notes`：展示用户保存的洞察和 AI 生成报告
+- [ ] Chat 页面历史会话侧边栏
+- [ ] 右侧 AI Analyst 的"生成报告"按钮接入 `report_agent`
+
+---
+
+### Phase 4 — 用户个性化（4-6 周）
+
+> 目标：系统越用越懂用户
+
+**后端：**
+
+- [ ] 用户行为日志表（收藏、点赞、点击卡片记录）
+- [ ] 基于用户行为的推荐权重调整（热门/个性化混合）
+- [ ] 邮件通知：任务完成/周报发送（可选）
+
+**前端：**
+
+- [ ] 个性化 Dashboard：根据用户常用模块和收藏类型优先展示
+- [ ] 推荐徽章："推荐 · 基于你的收藏"
+
+---
+
+## 十、关键 API 接口扩展清单
+
+在现有 4 个路由之上，需要新增：
+
+```
+# 卡片相关（前端展示核心）
+GET    /api/v1/cards?category=&limit=6&sort=score   # 按模块获取卡片
+GET    /api/v1/cards/{id}                            # 卡片详情
+POST   /api/v1/cards/{id}/favorite                   # 收藏/取消收藏
+POST   /api/v1/cards/{id}/like                       # 点赞
+
+# 聊天增强
+GET    /api/v1/chat/sessions                          # 历史会话列表
+GET    /api/v1/chat/sessions/{id}                     # 单个会话详情
+
+# 报告
+POST   /api/v1/reports/weekly                         # 生成本周报告
+GET    /api/v1/reports                                # 报告列表
+
+# 笔记
+POST   /api/v1/notes                                  # 保存笔记
+GET    /api/v1/notes                                  # 笔记列表
+DELETE /api/v1/notes/{id}                             # 删除笔记
+```
+
+---
+
+## 十一、技术债务和注意事项
+
+> [!WARNING]
+> **`source_signals` 字段始终为 `[]`**  
+> `orchestrator.py` 第 100 行硬编码 `source_signals=[]`。原始信号摘要（URL、来源）没有被存储。Phase 3 上线 `items` 表后需要修复这里，让 opportunity 关联具体的 item 记录。
+
+> [!WARNING]
+> **`tasks/page.tsx` 和 `saved/page.tsx` 里有 unreachable code**  
+> 两个文件都有 `export default function Page()` → `return <ExperienceComponent />` 然后又有完整的 JSX 永远不会执行的老版本代码。需要清理，否则会影响构建性能分析。
+
+> [!NOTE]
+> **Reddit 采集器是 Stub**  
+> `reddit_service.py` 导入 PRAW 并 mock 了结果，没有真实抓取。后续需要注册 Reddit App 获取 `client_id` + `client_secret`。
+
+> [!NOTE]
+> **数据库用 `create_all` 而非 Alembic 迁移**  
+> 当前 `main.py` 的 `lifespan` 直接调用 `Base.metadata.create_all()`。随着表的增加，必须引入 Alembic 做版本化迁移，否则生产环境无法零停机更新 schema。
+
+> [!CAUTION]
+> **AI Prompt 中无明确的股市免责声明**  
+> `stock_pulse_agent` 的 System Prompt 必须包含："本分析仅基于公开信息，不构成投资建议，不对任何投资损失负责。"这是合规要求。
+
+---
+
+## 十二、最终产品闭环
+
+```
+用户打开 Decypher AI（首页看到五个模块）
+        ↓
+点击模块（商业/学术/创业/股市/求职）
+        ↓
+系统从对应数据源（GitHub/arXiv/SEC/Product Hunt 等）获取数据
+        ↓
+AI Agent 分析、评分、生成 6 张信息卡片
+        ↓
+用户点击一张卡片 → 卡片紫色高亮
+        ↓
+右侧 AI Analyst 自动加载该卡片上下文
+        ↓
+用户点"Analyze" → AI 基于卡片+向量检索相关信号深度分析
+        ↓
+用户追问 → AI 引用具体数据来源回答
+        ↓
+用户可以：收藏 / 点赞 / 保存为笔记 / 生成报告
+        ↓
+系统记录用户偏好 → 下次推荐更符合口味的卡片
+```
+
+这就是 Decypher AI 的完整产品闭环。**不是仪表板，不是聊天机器人——是一个会学习、有上下文、跨模块关联的情报引擎。**
+
+---
+
+_文档版本：v1.0 · 基于代码库完整扫描生成_

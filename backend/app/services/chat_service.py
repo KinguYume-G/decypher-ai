@@ -1,73 +1,116 @@
 import logging
+from collections.abc import AsyncGenerator
 
 from app.config import settings
 from app.models.opportunity import Opportunity
 from app.schemas import ChatMessage
-from app.services.llm_client import chat_completion
+from app.services.llm_client import chat_completion, chat_completion_stream
 
 logger = logging.getLogger(__name__)
 
+_SYSTEM_ANALYST = (
+    "You are Decypher Core, an AI-powered tech intelligence analyst. "
+    "Give direct, evidence-based answers. Focus on: market size, risk factors, "
+    "validation experiments, MVP scope, customer segment, competitive landscape, "
+    "and concrete next actions. Use data from the opportunity context when available. "
+    "Be concise. No hype. Answer in the same language the user uses."
+)
+
+_SYSTEM_REPORT = (
+    "You are Decypher Core Report Generator. Generate a structured intelligence report "
+    "in Markdown format with these sections:\n"
+    "## Executive Summary\n## Market Analysis\n## Technical Assessment\n"
+    "## Risk Factors\n## Recommended Next Steps\n\n"
+    "Base the report on the provided opportunity data. Be specific and actionable. "
+    "Answer in the same language as the opportunity title."
+)
+
 
 class ChatService:
+
+    def _build_messages(
+        self,
+        system: str,
+        message: str,
+        history: list[ChatMessage],
+        opportunity: Opportunity | None,
+    ) -> list[dict[str, str]]:
+        ctx = self._format_opportunity(opportunity)
+        msgs: list[dict[str, str]] = [
+            {"role": "system", "content": system},
+            {"role": "user",   "content": ctx},
+        ]
+        for item in history[-10:]:
+            msgs.append({"role": item.role, "content": item.content})
+        msgs.append({"role": "user", "content": message})
+        return msgs
+
+    # ── 普通回复（兼容旧接口）──────────────────────────────────
     async def reply(
         self,
         message: str,
         history: list[ChatMessage],
         opportunity: Opportunity | None = None,
+        report_mode: bool = False,
     ) -> str:
-        context = self._format_opportunity(opportunity)
-        fallback = self._fallback_reply(message, opportunity)
-
+        system = _SYSTEM_REPORT if report_mode else _SYSTEM_ANALYST
+        msgs   = self._build_messages(system, message, history, opportunity)
         try:
             content = await chat_completion(
-                [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are Decypher Core, a concise startup opportunity analyst. "
-                            "Give direct, practical answers. Focus on risk, validation, MVP scope, "
-                            "customer segment, and next actions. Avoid hype."
-                        ),
-                    },
-                    {"role": "user", "content": context},
-                    *[
-                        {"role": item.role, "content": item.content}
-                        for item in history[-8:]
-                    ],
-                    {"role": "user", "content": message},
-                ],
-                max_tokens=min(settings.ai_max_tokens, 1200),
-                temperature=0.4,
+                msgs,
+                max_tokens=min(settings.ai_max_tokens, 2000 if report_mode else 1200),
+                temperature=0.3 if report_mode else 0.4,
             )
-            return content.strip() or fallback
+            return content.strip() or self._fallback_reply(opportunity)
         except Exception as e:
-            logger.warning(f"Chat completion failed, returning fallback: {e}")
-            return fallback
+            logger.warning(f"Chat completion failed: {e}")
+            return self._fallback_reply(opportunity)
+
+    # ── 流式回复（SSE 端点用）────────────────────────────────────
+    async def stream_reply(
+        self,
+        message: str,
+        history: list[ChatMessage],
+        opportunity: Opportunity | None = None,
+        report_mode: bool = False,
+    ) -> AsyncGenerator[str, None]:
+        system = _SYSTEM_REPORT if report_mode else _SYSTEM_ANALYST
+        msgs   = self._build_messages(system, message, history, opportunity)
+        try:
+            async for chunk in chat_completion_stream(
+                msgs,
+                max_tokens=min(settings.ai_max_tokens, 2000 if report_mode else 1200),
+                temperature=0.3 if report_mode else 0.4,
+            ):
+                yield chunk
+        except Exception as e:
+            logger.warning(f"Stream completion failed: {e}")
+            yield self._fallback_reply(opportunity)
 
     def _format_opportunity(self, opportunity: Opportunity | None) -> str:
         if opportunity is None:
-            return "No selected opportunity. Answer as a general product strategy analyst."
-
+            return "No opportunity selected. Act as a general tech intelligence analyst."
         return (
-            "Selected opportunity:\n"
-            f"Title: {opportunity.title}\n"
+            f"Opportunity: {opportunity.title}\n"
+            f"Category: {opportunity.category}\n"
             f"What to build: {opportunity.what_to_build}\n"
             f"Why it matters: {opportunity.why_it_matters}\n"
             f"How to execute: {opportunity.how_to_execute}\n"
-            f"Scores: trend={opportunity.score_trend}, novelty={opportunity.score_novelty}, "
-            f"competition={opportunity.score_competition}, feasibility={opportunity.score_feasibility}, "
-            f"commercial={opportunity.score_commercial}, total={opportunity.score_total}\n"
-            f"Keywords: {', '.join(opportunity.keywords_matched or [])}"
+            f"Scores — trend:{opportunity.score_trend} novelty:{opportunity.score_novelty} "
+            f"competition:{opportunity.score_competition} feasibility:{opportunity.score_feasibility} "
+            f"commercial:{opportunity.score_commercial} total:{opportunity.score_total}\n"
+            f"Keywords: {', '.join(opportunity.keywords_matched or [])}\n"
+            f"Sources: {', '.join((opportunity.source_signals or [])[:5])}"
         )
 
-    def _fallback_reply(self, message: str, opportunity: Opportunity | None) -> str:
-        subject = opportunity.title if opportunity else "this idea"
+    def _fallback_reply(self, opportunity: Opportunity | None) -> str:
+        subject = opportunity.title if opportunity else "this topic"
         return (
-            f"Here is a practical read on {subject}:\n\n"
-            "1. Validate demand first: interview 8-12 target users and confirm the problem is urgent, recurring, and budgeted.\n"
-            "2. Keep the MVP narrow: build one workflow that turns raw signals into one clear decision or saved hour.\n"
-            "3. Watch the risk: noisy data, weak differentiation, and unclear buyer ownership are the biggest blockers.\n"
-            "4. Next step: define the first customer profile, one success metric, and a 2-week prototype scope."
+            f"Analysis for **{subject}**:\n\n"
+            "1. **Validate first**: Interview 8-12 target users to confirm the problem is urgent and budgeted.\n"
+            "2. **Narrow MVP**: Build one workflow that delivers one clear decision or saves one hour.\n"
+            "3. **Key risks**: Noisy data, weak differentiation, unclear buyer ownership.\n"
+            "4. **Next step**: Define first customer profile, one success metric, 2-week prototype scope."
         )
 
 
