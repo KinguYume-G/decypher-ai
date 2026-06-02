@@ -4,23 +4,23 @@ import asyncio
 import logging
 
 from app.models.task import Task
-from app.services.arxiv_service import arxiv_service
-from app.services.base_data_service import RawSignal
-from app.services.devto_service import devto_service
-from app.services.github_service import github_service
-from app.services.hn_service import hn_service
-from app.services.openalex_service import openalex_service
-from app.services.papers_with_code_service import papers_with_code_service
-from app.services.producthunt_service import producthunt_service
-from app.services.reddit_service import reddit_service
-from app.services.remoteok_service import remoteok_service
-from app.services.rss_service import (
+from app.integrations.arxiv_service import arxiv_service
+from app.integrations.base_data_service import RawSignal
+from app.integrations.devto_service import devto_service
+from app.integrations.github_service import github_service
+from app.integrations.hn_service import hn_service
+from app.integrations.openalex_service import openalex_service
+from app.integrations.papers_with_code_service import papers_with_code_service
+from app.integrations.producthunt_service import producthunt_service
+from app.integrations.reddit_service import reddit_service
+from app.integrations.remoteok_service import remoteok_service
+from app.integrations.rss_service import (
     rss_jobs_service, rss_market_service, rss_research_service,
     rss_startup_service, rss_stocks_service,
 )
-from app.services.sec_service import sec_service
-from app.services.semantic_scholar_service import semantic_scholar_service
-from app.services.stackexchange_service import stackexchange_service
+from app.integrations.sec_service import sec_service
+from app.integrations.semantic_scholar_service import semantic_scholar_service
+from app.integrations.stackexchange_service import stackexchange_service
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@
 # Pipeline 第二层：按 URL 去重、按分数排序、截断正文，拼接为供 AI 消费的单一文本块。
 import logging
 
-from app.services.base_data_service import RawSignal
+from app.integrations.base_data_service import RawSignal
 
 logger = logging.getLogger(__name__)
 

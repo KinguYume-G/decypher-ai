@@ -96,10 +96,10 @@ async def run_task(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from app.workers.orchestrator import run_analysis_task  # avoid circular import at module level
+    from app.services.pipeline_service import run_pipeline
 
     task = await _get_user_task(task_id, current_user.id, db)
-    background_tasks.add_task(run_analysis_task, task_id)
+    background_tasks.add_task(run_pipeline, task_id)
     return APIResponse(success=True, data={"message": f"任务 '{task.name}' 已触发执行，结果稍后可查看"})
 
 

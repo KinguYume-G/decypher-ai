@@ -4,7 +4,7 @@ import logging
 
 import httpx
 
-from app.services.base_data_service import BaseDataService, RawSignal
+from app.integrations.base_data_service import BaseDataService, RawSignal
 
 logger = logging.getLogger(__name__)
 
