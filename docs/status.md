@@ -22,26 +22,27 @@
 | Chat 消息 API | `app/api/v1/chat.py` | ✅ SSE 流式 |
 | 笔记 CRUD | `app/api/v1/notes.py` | ✅ 完整 |
 | 数据库模型 | `app/models/` | ✅ User / Task / Opportunity / Note / UserFavorite |
-| GitHub 采集器 | `app/services/github_service.py` | ✅ issues + repos |
-| HackerNews 采集器 | `app/services/hn_service.py` | ✅ Algolia API |
-| arXiv 采集器 | `app/services/arxiv_service.py` | ✅ |
-| OpenAlex 采集器 | `app/services/openalex_service.py` | ✅ |
-| Product Hunt 采集器 | `app/services/producthunt_service.py` | ✅ |
-| SEC EDGAR 采集器 | `app/services/sec_service.py` | ✅ |
-| Stack Exchange 采集器 | `app/services/stackexchange_service.py` | ✅ |
-| Dev.to 采集器 | `app/services/devto_service.py` | ✅ |
-| Semantic Scholar 采集器 | `app/services/semantic_scholar_service.py` | ✅ |
-| Papers With Code 采集器 | `app/services/papers_with_code_service.py` | ✅ |
-| Remote OK 采集器 | `app/services/remoteok_service.py` | ✅ |
-| RSS 采集器 | `app/services/rss_service.py` | ✅ 通用 |
-| Reddit 采集器 | `app/services/reddit_service.py` | ⚠️ Stub（见技术债务） |
-| 采集编排 | `app/workers/collector.py` | ✅ asyncio.gather 并发 |
-| 数据清洗 | `app/workers/processor.py` | ✅ 去重 + 格式化 |
-| 流水线编排 | `app/workers/orchestrator.py` | ✅ 状态机 |
+| Pipeline 触发桥接 | `app/services/pipeline_service.py` | ✅ API → Worker 唯一入口 |
 | LLM 统一客户端 | `app/services/llm_client.py` | ✅ OpenAI-compatible |
 | 创业机会分析 | `app/services/analysis_service.py` | ✅ JSON 结构化提取 |
 | 聊天服务 | `app/services/chat_service.py` | ✅ 带 fallback |
 | Pydantic Schemas | `app/schemas/__init__.py` | ✅ 完整类型定义 |
+| GitHub 采集器 | `app/integrations/github_service.py` | ✅ issues + repos |
+| HackerNews 采集器 | `app/integrations/hn_service.py` | ✅ Algolia API |
+| arXiv 采集器 | `app/integrations/arxiv_service.py` | ✅ |
+| OpenAlex 采集器 | `app/integrations/openalex_service.py` | ✅ |
+| Product Hunt 采集器 | `app/integrations/producthunt_service.py` | ✅ |
+| SEC EDGAR 采集器 | `app/integrations/sec_service.py` | ✅ |
+| Stack Exchange 采集器 | `app/integrations/stackexchange_service.py` | ✅ |
+| Dev.to 采集器 | `app/integrations/devto_service.py` | ✅ |
+| Semantic Scholar 采集器 | `app/integrations/semantic_scholar_service.py` | ✅ |
+| Papers With Code 采集器 | `app/integrations/papers_with_code_service.py` | ✅ |
+| Remote OK 采集器 | `app/integrations/remoteok_service.py` | ✅ |
+| RSS 采集器 | `app/integrations/rss_service.py` | ✅ 5 个专项 feed |
+| Reddit 采集器 | `app/integrations/reddit_service.py` | ⚠️ Stub（见技术债务） |
+| 采集编排 | `app/workers/collector.py` | ✅ asyncio.gather 并发 |
+| 数据清洗 | `app/workers/processor.py` | ✅ 去重 + 格式化 |
+| 流水线编排 | `app/workers/orchestrator.py` | ✅ 状态机 |
 
 ### 前端
 
@@ -69,9 +70,10 @@
 
 | 功能 | 优先级 | 说明 |
 | - | - | - |
-| **RAG 向量检索** | 🔴 高 | Chat 当前直接传文本，没有向量检索相关信号 |
+| **Alembic 迁移体系** | 🔴 高 | 当前用 create_all，添加任何新表前必须先完成 |
 | **items 原始信号表** | 🔴 高 | 原始信号目前不入库，无法支持 RAG |
-| **cards 独立表** | 🔴 高 | 现在 opportunity ≈ card，需要独立 Card 实体支持 category/tags |
+| **RAG 向量检索** | 🔴 高 | Chat 当前直接传文本，没有向量检索相关信号 |
+| **cards 独立表** | 🟡 中 | 现在 opportunity ≈ card，需要独立 Card 实体支持 category/tags |
 | **实体抽取** | 🟡 中 | 无公司 / 技术 / 岗位实体识别 |
 | **报告生成** | 🟡 中 | ReportAgent 尚未实现 |
 | **对话持久化** | 🟡 中 | Chat 消息不保存，刷新消失 |
@@ -94,21 +96,17 @@
 ## 技术债务
 
 > [!WARNING]
-> **`source_signals` 始终为 `[]`**  
-> `orchestrator.py` 约第 100 行硬编码 `source_signals=[]`。原始信号 URL 未被存储。Phase 3 上线 `items` 表后修复，让 opportunity 关联具体 item 记录。
-
-> [!WARNING]
 > **`tasks/page.tsx` 和 `saved/page.tsx` 有 unreachable code**  
 > 两文件均有旧版 JSX 永远不会执行。需清理，否则影响构建分析。
 
-> [!NOTE]
-> **Reddit 采集器是 Stub**  
-> `reddit_service.py` mock 了结果，无真实抓取。需注册 Reddit App 获取 `client_id` + `client_secret`。
+> [!WARNING]
+> **数据库用 `create_all` 而非 Alembic**  
+> `lifespan` 直接调用 `Base.metadata.create_all()`。添加 `items` 表等新 schema 前必须先完成 Alembic 初始化，否则生产环境无法零停机更新。
 
 > [!NOTE]
-> **数据库用 `create_all` 而非 Alembic**  
-> `lifespan` 直接调用 `Base.metadata.create_all()`。引入新表后必须改用 Alembic 版本化迁移，否则生产环境无法零停机更新 schema。
+> **Reddit 采集器是 Stub**  
+> `app/integrations/reddit_service.py` 固定返回 `[]`，无真实抓取。需注册 Reddit App 获取 `client_id` + `client_secret`。
 
 > [!CAUTION]
 > **股市 Prompt 缺免责声明**  
-> `stock_pulse_agent` 的 System Prompt 必须加入："本分析仅基于公开信息，不构成投资建议，不对任何投资损失负责。"这是合规要求。
+> 分析股市数据的 Prompt 必须加入："本分析仅基于公开信息，不构成投资建议，不对任何投资损失负责。"这是合规要求。
