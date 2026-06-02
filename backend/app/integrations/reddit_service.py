@@ -2,7 +2,7 @@
 # Reddit 占位服务；OAuth2 对接尚未完成，search() 目前固定返回空列表。
 import logging
 
-from app.services.base_data_service import BaseDataService, RawSignal
+from app.integrations.base_data_service import BaseDataService, RawSignal
 
 logger = logging.getLogger(__name__)
 

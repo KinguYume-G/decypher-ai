@@ -4,6 +4,8 @@
 
 ## 系统概览
 
+FastAPI 后端内部存在两条完全独立的执行路径，共用同一个 PostgreSQL。
+
 ```
 用户浏览器
     │
@@ -15,48 +17,49 @@
 └────────────────┬────────────────────────┘
                  │ REST API + SSE
                  ▼
-┌──────────────────────────────────────────────┐
-│              FastAPI 后端  :8000             │
-│                                              │
-│  ┌──────────────┐  ┌───────────────────┐     │
-│  │  API 路由层   │  │  认证中间件 (JWT)  │     │
-│  │  app/api/v1/ │  │  app/api/deps.py  │     │
-│  └──────┬───────┘  └───────────────────┘     │
-│         │                                    │
-│  ┌──────▼────────────────────────────────┐   │
-│  │           Service 层                  │   │
-│  │  analysis_service  chat_service       │   │
-│  │  github_service    hn_service         │   │
-│  │  arxiv_service     producthunt_service│   │
-│  │  ... (15+ 数据源服务)                  │   │
-│  └──────┬────────────────────────────────┘   │
-│         │                                    │
-│  ┌──────▼────────────────────────────────┐   │
-│  │           Worker 层 (Pipeline)        │   │
-│  │  collector → processor → orchestrator │   │
-│  └──────┬────────────────────────────────┘   │
-│         │                                    │
-│  ┌──────▼──────────┐                         │
-│  │  APScheduler    │  ← 定时触发 / 手动触发   │
-│  │  core/scheduler │                         │
-│  └─────────────────┘                         │
-└──────┬──────────────────────┬────────────────┘
-       │                      │
-       ▼                      ▼
-┌────────────┐        ┌─────────────┐
-│ PostgreSQL │        │    Redis    │
-│ users      │        │ Job Store   │
-│ tasks      │        │ (APScheduler│
-│ opportunities       │  持久化)    │
-│ notes      │        └─────────────┘
-│ user_favorites
-└────────────┘
-       │
-       ▼ (外部 API 调用，在 Service 层发起)
-┌──────────────────────────────────────────┐
-│  OpenAI / DeepSeek  GitHub  HN  arXiv    │
-│  Product Hunt  SEC EDGAR  OpenAlex  ...  │
-└──────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                      FastAPI 后端  :8000                         │
+│                                                                  │
+│  ┌──────────────┐  ┌───────────────────┐                        │
+│  │  API 路由层   │  │  认证中间件 (JWT)  │                        │
+│  │  app/api/v1/ │  │  app/api/deps.py  │                        │
+│  └──┬───────┬───┘  └───────────────────┘                        │
+│     │       │                                                    │
+│  (SSE)  (任务触发)                                               │
+│     │       │                                                    │
+│     ▼       ▼                                                    │
+│  ┌──────────────────┐  ┌──────────────────────────────────────┐  │
+│  │   chat_service   │  │          pipeline_service            │  │
+│  └────────┬─────────┘  └─────────────────┬────────────────────┘  │
+│           │ HTTP                         │                      │
+│        LLM API                           │ (手动触发)            │
+│                                          │                      │
+│                          ┌───────────────┘   APScheduler       │
+│                          │               (定时触发)             │
+│                          ▼               │                      │
+│                  ┌───────────────────────┴──────────────────┐  │
+│                  │           Worker 层 (Pipeline)            │  │
+│                  │   collector → processor → orchestrator   │  │
+│                  │        │                     │           │  │
+│                  │  ┌─────▼──────────────┐  ┌───▼─────────┐ │  │
+│                  │  │   数据采集服务       │  │  AI 处理服务 │ │  │
+│                  │  │  (app/integrations/)│  │analysis_svc │ │  │
+│                  │  └─────────┬───────────┘  └──────┬──────┘ │  │
+│                  └───────────-┼─────────────────────┼────────┘  │
+│                               │ HTTP                │ HTTP      │
+│                           外部数据 API            LLM API       │
+│                                                                  │
+│  API 路由层直接读写 PostgreSQL（tasks / notes / opps / cards CRUD）│
+└────────────────────────────────┬─────────────────────────────────┘
+                                 │
+                  ┌──────────────┴──────────────┐
+                  ▼                             ▼
+         ┌─────────────────┐         ┌──────────────────┐
+         │   PostgreSQL    │         │      Redis       │
+         │  users / tasks  │         │  APScheduler     │
+         │  opportunities  │         │  JobStore        │
+         │  notes / ...    │         └──────────────────┘
+         └─────────────────┘
 ```
 
 ---
@@ -64,16 +67,94 @@
 ## 层间调用关系
 
 ```
+── 路径 A：API 请求/响应路径 ─────────────────────────────────────────
+
 HTTP 请求
-  → API 路由 (app/api/v1/*.py)         ← 只做参数校验 + 调用 service/worker
-      → deps.py                        ← 注入 DB session 和 current_user
-      → Service 层 (app/services/)     ← 封装外部 API 调用和 AI 分析
-      → Worker 层 (app/workers/)       ← 编排多步 Pipeline（collect→process→analyze）
-          → collector.py               ← 并发调用所有数据源 service
-          → processor.py               ← 去重、截断、格式化为 AI 可读文本
-          → orchestrator.py            ← 调用 analysis_service，结果写入 DB
-      → ORM 模型 (app/models/)         ← SQLAlchemy 2.0 Async，定义表结构
-      → DB (app/database.py)           ← 异步 session 工厂
+  → API 路由 (app/api/v1/*.py)
+      → deps.py                    ← 注入 AsyncSession + 解析 JWT → User
+      → PostgreSQL 直接操作         ← CRUD（tasks / notes / opps / cards）
+      → chat_service               ← 仅 chat.py 调用，SSE 流式对话
+
+── 路径 B：Pipeline 执行路径 ─────────────────────────────────────────
+
+触发（手动 POST /tasks/{id}/run 或 APScheduler 定时）
+  → pipeline_service               ← API 手动触发的入口（APScheduler 跳过此层）
+  → Worker 层 (app/workers/)       ← 编排多步 Pipeline
+      → collector.py               ← asyncio.gather 并发调用所有 integration.search()
+          → app/integrations/      ← 各数据源适配器，向外部 API 发 HTTP 请求
+      → processor.py               ← 去重、截断、格式化为 AI 可读文本
+      → orchestrator.py            ← 调用 analysis_service，结果写入 PostgreSQL
+          → analysis_service       ← 调用 llm_client → LLM API
+  → ORM 模型 (app/models/)         ← SQLAlchemy 2.0 Async，定义表结构
+```
+
+---
+
+## 采集 Pipeline 数据流
+
+从触发到落库的完整数据流，三层串行执行：
+
+```
+触发源：APScheduler（定时）或 POST /api/v1/tasks/{id}/run（手动）
+    │
+    ▼
+┌────────────────────────────────────────────────┐
+│  orchestrator.py                               │
+│  从 PostgreSQL 加载 Task（keywords + sources）  │
+└────────────────────────┬───────────────────────┘
+                         │
+    ┌────────────────────▼───────────────────────┐
+    │  Layer 1 — collector.py                    │
+    │  asyncio.gather 并发调用各 service.search() │
+    │                                            │
+    │  通用类                                    │
+    │    github       ──HTTP──▶  GitHub REST API │
+    │    hackernews   ──HTTP──▶  Algolia HN API  │
+    │    devto        ──HTTP──▶  Dev.to API      │
+    │    producthunt  ──HTTP──▶  PH GraphQL API  │
+    │    reddit       ──HTTP──▶  (WIP)           │
+    │  学术研究类                                 │
+    │    arxiv        ──HTTP──▶  arXiv API       │
+    │    openalex     ──HTTP──▶  OpenAlex API    │
+    │    semanticscholar ─────▶  S2 API          │
+    │    paperswithcode  ─────▶  PWC API         │
+    │    rss_research ──HTTP──▶  RSS Feeds       │
+    │  商业市场类                                 │
+    │    sec          ──HTTP──▶  SEC EDGAR API   │
+    │    rss_market   ──HTTP──▶  RSS Feeds       │
+    │    rss_startup  ──HTTP──▶  RSS Feeds       │
+    │    rss_stocks   ──HTTP──▶  RSS Feeds       │
+    │  求职热点类                                 │
+    │    stackexchange ────────▶  SE API         │
+    │    remoteok     ──HTTP──▶  Remote OK API   │
+    │    rss_jobs     ──HTTP──▶  RSS Feeds       │
+    │                                            │
+    │  输出：List[RawSignal]                     │
+    └────────────────────┬───────────────────────┘
+                         │
+    ┌────────────────────▼───────────────────────┐
+    │  Layer 2 — processor.py                    │
+    │  去重（by URL）→ 按 score 降序排列           │
+    │  → 截断超长正文 → 拼接为单一文本块           │
+    │                                            │
+    │  输出：str（信号摘要文本）                  │
+    └────────────────────┬───────────────────────┘
+                         │
+    ┌────────────────────▼───────────────────────┐
+    │  Layer 3 — analysis_service.py             │
+    │  构建系统提示词（agents/prompts.py 模板）    │
+    │  调用 llm_client.chat()                    │
+    │    ──HTTP──▶  OpenAI / DeepSeek / Ollama   │
+    │  解析 JSON → List[Opportunity]             │
+    │                                            │
+    │  输出：List[Opportunity]（含 5 维评分）     │
+    └────────────────────┬───────────────────────┘
+                         │
+    ┌────────────────────▼───────────────────────┐
+    │  orchestrator.py                           │
+    │  批量写入 Opportunity → PostgreSQL          │
+    │  更新 Task.status / last_run_at / run_count │
+    └────────────────────────────────────────────┘
 ```
 
 ---
@@ -107,16 +188,16 @@ app/
 app/api/
 ├── deps.py
 │     两个 FastAPI 依赖函数：
-│       get_db()          → 注入 AsyncSession
+│       get_db()           → 注入 AsyncSession，请求结束后自动关闭
 │       get_current_user() → 解析 Bearer Token，返回 User 对象；Token 无效则 401
 │
 └── v1/
     ├── __init__.py          聚合所有子路由，供 main.py include_router 使用
     ├── auth.py              POST /register、POST /login（返回 JWT）、GET /me
-    ├── tasks.py             任务 CRUD + POST /{id}/run（手动触发分析 Pipeline）
-    ├── opportunities.py     GET 列表（支持 task_id / category 过滤）+ GET 详情 + 收藏
+    ├── tasks.py             任务 CRUD + POST /{id}/run（调用 pipeline_service 触发分析）
+    ├── opportunities.py     GET 列表（支持 task_id / category 过滤）+ GET 详情
     ├── cards.py             GET /cards（按 category 浏览情报卡片，附带收藏状态）
-    ├── chat.py              POST /chat/stream（SSE 流式对话）
+    ├── chat.py              POST /chat/stream（SSE 流式对话，调用 chat_service）
     ├── notes.py             用户笔记 CRUD（list / create / update / delete）
     ├── seed.py              POST /seed（一键写入演示数据，数据库非空时跳过）
     └── signals.py           占位文件，原始信号端点尚未实现
@@ -134,7 +215,7 @@ app/core/
 └── scheduler.py
       APScheduler AsyncIOScheduler，Redis 作为 JobStore（任务重启后仍存活）。
       暴露 add_task_job() / remove_task_job() / pause_task_job()。
-      被 tasks.py 路由和 orchestrator.py 调用。
+      被 tasks.py 路由调用（注册/删除调度任务），定时到期时直接触发 orchestrator。
 ```
 
 ### ORM 模型（`app/models/`）
@@ -165,36 +246,57 @@ app/schemas/
         ChatRequest / ChatDelta
 ```
 
+### 数据源适配层（`app/integrations/`）
+
+外部数据 API 的适配器，全部继承 `base_data_service.BaseDataService`，只被 `collector.py` 调用，与 API 路由层无关。
+
+```
+app/integrations/
+│
+├── base_data_service.py     抽象基类：定义 RawSignal 数据结构和 search() 接口。
+│                            子类必须实现 fetch_raw()；search() 负责异常捕获和日志。
+│
+│  通用类
+├── github_service.py        GitHub REST API，搜索 repos/issues（Token 认证）
+├── hn_service.py            Algolia HN Search API，搜索帖子和评论（无需认证）
+├── devto_service.py         Dev.to 公开 API，获取技术文章
+├── producthunt_service.py   Product Hunt GraphQL API，获取最新产品发布
+├── reddit_service.py        占位实现，Reddit OAuth2 对接尚未完成（固定返回 []）
+│
+│  学术研究类
+├── arxiv_service.py         arXiv API，获取学术论文摘要
+├── openalex_service.py      OpenAlex 开放学术图谱，获取研究成果
+├── semantic_scholar_service.py  Semantic Scholar API，获取 AI/ML 论文
+├── papers_with_code_service.py  Papers With Code API，获取有代码的 ML 论文
+│
+│  商业市场类
+├── sec_service.py           SEC EDGAR 全文搜索，获取监管文件
+├── rss_service.py           通用异步 RSS/Atom 解析器，实例化为多个专项 feed：
+│                              rss_research / rss_market / rss_startup / rss_stocks / rss_jobs
+│
+│  求职热点类
+├── stackexchange_service.py Stack Exchange API，搜索相关问题
+└── remoteok_service.py      Remote OK JSON API，获取远程科技职位
+```
+
 ### 业务服务层（`app/services/`）
+
+纯内部服务，不调用外部数据 API，只处理 AI 分析和对话逻辑。
 
 ```
 app/services/
 │
-├── llm_client.py            OpenAI SDK 封装，提供 chat()（同步返回）和 stream()（AsyncGenerator）。
-│                            所有需要调用大模型的地方都通过这里，避免 SDK 调用散落各处。
+├── pipeline_service.py      pipeline_service.run_pipeline(task_id) — API 手动触发的入口。
+│                            封装对 orchestrator 的调用，是 API 层与 Worker 层之间的唯一桥梁。
 │
-├── analysis_service.py      调用 llm_client，将 processor 输出的信号文本转化为结构化
-│                            Opportunity JSON（含 5 维评分）。被 orchestrator 调用。
+├── llm_client.py            OpenAI SDK 封装，提供 chat()（完整返回）和 stream()（AsyncGenerator）。
+│                            所有 LLM 调用的统一入口，被 analysis_service 和 chat_service 共用。
 │
-├── chat_service.py          构建系统提示词，调用 llm_client.stream()，
-│                            将 AI 回复以 SSE chunk 逐字发送给前端。被 chat.py 路由调用。
+├── analysis_service.py      ETL Pipeline 的 AI 环节：将 processor 输出的文本转化为
+│                            结构化 Opportunity JSON（含 5 维评分）。被 orchestrator 调用。
 │
-├── base_data_service.py     抽象基类，定义 RawSignal 数据结构和 search() 接口。
-│                            所有数据源 service 必须继承并实现 fetch_raw()。
-│
-├── github_service.py        调用 GitHub REST API 搜索 repos/issues（Token 认证，5000次/小时）
-├── hn_service.py            调用 Algolia HN Search API 搜索帖子和评论（无需认证）
-├── arxiv_service.py         调用 arXiv API 获取学术论文摘要
-├── producthunt_service.py   调用 Product Hunt GraphQL API 获取最新产品发布
-├── devto_service.py         调用 Dev.to 公开 API 获取技术文章
-├── openalex_service.py      调用 OpenAlex 开放学术图谱获取研究成果
-├── semantic_scholar_service.py  调用 Semantic Scholar API 获取 AI/ML 论文
-├── papers_with_code_service.py  调用 Papers With Code API 获取有代码的 ML 论文
-├── sec_service.py           调用 SEC EDGAR 全文搜索获取监管文件
-├── stackexchange_service.py 调用 Stack Exchange API 搜索相关问题
-├── remoteok_service.py      调用 Remote OK JSON API 获取远程科技职位
-├── rss_service.py           通用异步 RSS/Atom 解析器，被多个频道订阅 feed 使用
-├── reddit_service.py        占位实现，Reddit OAuth2 对接尚未完成
+├── chat_service.py          前端对话的 AI 环节：构建系统提示词，调用 llm_client.stream()，
+│                            将 LLM 回复以 SSE chunk 逐字推送给前端。被 chat.py 路由调用。
 │
 └── agents/
     ├── __init__.py
@@ -208,7 +310,7 @@ app/workers/
 ├── __init__.py
 │
 ├── collector.py       Layer 1 — 并发采集
-│                      按 Task.sources 配置，asyncio.gather 并发调用各 service.search()。
+│                      按 Task.sources 配置，asyncio.gather 并发调用各 integration.search()。
 │                      输入：Task（含 keywords + sources）
 │                      输出：List[RawSignal]
 │
@@ -221,7 +323,7 @@ app/workers/
 └── orchestrator.py    Layer 3 — 编排 + 存库
                        调用 collector → processor → analysis_service，
                        将返回的 Opportunity 列表写入 DB，更新 Task.status 和 last_run_at。
-                       由 APScheduler 定时触发，或 /tasks/{id}/run 手动触发。
+                       由 APScheduler 定时触发，或经由 pipeline_service 手动触发。
 ```
 
 ---
