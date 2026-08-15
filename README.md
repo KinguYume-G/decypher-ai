@@ -1,4 +1,4 @@
-# Decypher AI ── 智能科技情报与决策引擎
+# Decypher AI
 
 ![Status-Active](https://img.shields.io/badge/Status-Development-emerald?style=for-the-badge&logo=statuspage)
 ![Next.js](https://img.shields.io/badge/Next.js-14.x-black?style=for-the-badge&logo=nextdotjs)
@@ -6,132 +6,180 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis)
 
-AI 驱动的科技情报平台，持续从 15+ 数据源采集信号，通过 LLM 分析生成结构化机会卡片，右侧配备 SSE 流式 AI Analyst。→ [了解产品定位](docs/product.md)
+Decypher AI is an AI-powered intelligence platform for tracking technology signals, analyzing market opportunities, and turning fragmented public data into structured decision support. The system continuously collects information from more than 15 sources, filters and summarizes it with LLMs, and presents actionable opportunity cards through a web dashboard and AI analyst interface.
 
----
+## Overview
 
-## 系统架构
+This project combines:
+
+- multi-source signal collection from GitHub, Hacker News, arXiv, Product Hunt, Stack Exchange, SEC, RSS feeds, and more
+- asynchronous backend orchestration with FastAPI and APScheduler
+- AI-powered analysis and report generation using OpenAI-compatible LLM APIs
+- a Next.js dashboard for task management, opportunity discovery, notes, and chat
+- PostgreSQL for structured data storage and Redis for scheduling metadata
+
+## Core Features
+
+- Daily or interval-based intelligence tasks
+- Multi-source scraping and normalization pipeline
+- AI analysis for opportunity scoring and summarization
+- Task management and execution triggers
+- Dashboard for curated opportunity cards
+- Chat interface with realtime AI analyst responses via SSE
+- User authentication and notes system
+
+## System Architecture
 
 ```mermaid
 graph TD
-    subgraph 外部数据源
-        A1[GitHub] & A2[Hacker News] & A3[arXiv]
-        A4[Product Hunt] & A5[SEC / OpenAlex / Dev.to / ...]
-    end
+    A[External Data Sources] --> B[Collector]
+    B --> C[Processor]
+    C --> D[Analysis Service]
+    D --> E[(PostgreSQL)]
+    F[APScheduler] --> B
 
-    subgraph FastAPI 后端 :8000
-        B1[APScheduler 定时调度]
-        B2[Orchestrator 任务编排]
-        B3[Collector 并发采集]
-        B4[Processor 清洗去重]
-        B5[LLM Client]
-        B6[Analysis Service]
-        B7[Chat Service / SSE]
-    end
-
-    subgraph 存储层
-        C1[(PostgreSQL)]
-        C2[(Redis — Job Store)]
-    end
-
-    subgraph Next.js 前端 :3000
-        D1[Dashboard — Bento 卡片]
-        D2[AI Analyst — 右侧聊天]
-        D3[Tasks — 任务管理]
-    end
-
-    A1 & A2 & A3 & A4 & A5 -->|原始信号| B3
-    B1 -->|定时触发| B2
-    B2 --> B3 --> B4 --> B5 --> B6
-    B6 -->|结构化机会| C1
-    B2 -->|Job 元数据| C2
-    C1 <-->|REST API / SSE| D1 & D2 & D3
-    D2 -->|用户追问| B7
+    G[Next.js Frontend] --> H[FastAPI API]
+    H --> E
+    H --> I[Chat Service / SSE]
+    I --> J[LLM API]
 ```
 
----
+## Tech Stack
 
-## 文档
+### Backend
+- Python 3.11+
+- FastAPI
+- SQLAlchemy 2.0 + asyncpg
+- PostgreSQL
+- Redis
+- APScheduler
+- Pydantic + Pydantic Settings
+- OpenAI-compatible LLM integration
 
-### 文档索引
+### Frontend
+- Next.js 14
+- React 18
+- TypeScript
+- Tailwind CSS
+- Zustand
+- Axios
 
-| 文档 | 内容 |
-|-|-|
-| [docs/product.md](docs/product.md) | 产品定位、五大模块、完整产品闭环 |
-| [docs/status.md](docs/status.md) | 当前实现状态、功能缺口、技术债务 |
-| [docs/roadmap.md](docs/roadmap.md) | 分阶段开发计划（Phase 1~4）+ 实现规格 |
-| [docs/architecture.md](docs/architecture.md) | 系统架构、模块职责、层间调用关系 |
-| [docs/api/conventions.md](docs/api/conventions.md) | API 全局约定：响应格式、状态码、认证、命名 |
-| [docs/api/](docs/api/) | 各资源接口文档（auth / tasks / opportunities / cards / chat / notes / system） |
-| [docs/database/overview.md](docs/database/overview.md) | 数据库概览、ERD、迁移策略 |
-| [docs/database/current_schema.md](docs/database/current_schema.md) | 当前表结构定义 + 数据样例 |
-| [docs/database/extension_plan.md](docs/database/extension_plan.md) | Phase 1~3 规划中的新表 |
-| [docs/tech-stack.md](docs/tech-stack.md) | 技术选型及版本约束 |
-| [docs/external_api/](docs/external_api/) | 外部 API 参考文档（15+ 数据源） |
+### Infrastructure
+- Docker Compose
+- PostgreSQL 15
+- Redis 7
 
-### 阅读顺序
+## Project Structure
 
-根据你的角色选择起点：
+```text
+.
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   ├── core/
+│   │   ├── integrations/
+│   │   ├── models/
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   ├── workers/
+│   │   ├── config.py
+│   │   └── database.py
+│   ├── tests/
+│   ├── main.py
+│   ├── requirements.txt
+│   └── pytest.ini
+├── frontend/
+│   ├── src/
+│   ├── package.json
+│   └── next.config.js
+├── docs/
+├── docker-compose.yml
+├── .env.example
+├── README.md
+├── CLAUDE.md
+└── scratch_convert.py
+```
 
-| 角色 | 阅读路径 |
-|-|-|
-| **新成员 / 初次了解项目** | [product](docs/product.md) → [architecture](docs/architecture.md) → [status](docs/status.md) → [roadmap](docs/roadmap.md) |
-| **接手某个功能开发** | [status](docs/status.md)（确认缺口）→ [roadmap](docs/roadmap.md)（实现规格）→ [docs/api/](docs/api/) / [database](docs/database/overview.md) |
-| **AI 编程助手（Claude Code）** | 见 `CLAUDE.md`（已自动加载） |
+## Getting Started
 
----
-
-## 快速开始
-
-### 前置要求
+### Prerequisites
 
 - Python 3.11+
-- Node.js 20.x (LTS)
-- Docker Desktop（建议开启 WSL2）
+- Node.js 20+
+- Docker Desktop
 
-### 1. 配置环境变量
+### 1. Configure environment
 
-在项目根目录创建 `.env` 文件（参考 `.env.example`）：
+Create a `.env` file in the project root by copying `.env.example` and filling in your values.
 
-```env
-DECYPHER_SECRET_KEY=<openssl rand -hex 32 生成>
-DECYPHER_DATABASE_URL=postgresql+asyncpg://decypher:decypher123@localhost:5432/decypher_db
-DECYPHER_REDIS_URL=redis://localhost:6379/0
-DECYPHER_AI_PROVIDER=openai
-OPENAI_API_KEY=sk-proj-...
-NEXT_PUBLIC_API_URL=http://localhost:8000
-DECYPHER_ALLOWED_ORIGINS=http://localhost:3000
+```bash
+copy .env.example .env
 ```
 
-### 2. 启动基础设施
+### 2. Start infrastructure services
 
-```powershell
+```bash
 docker compose up -d
 ```
 
-### 3. 启动后端
+This starts:
+- PostgreSQL on port 5432
+- Redis on port 6379
 
-```powershell
+### 3. Start the backend
+
+```bash
 cd backend
 python -m venv .venv
-.venv\Scripts\Activate.ps1   # macOS/Linux: source .venv/bin/activate
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-验证：`http://localhost:8000/health` → `{"status": "healthy"}`  
-Swagger：`http://localhost:8000/api/docs`
+Verify the service:
 
-### 4. 启动前端
+```bash
+http://localhost:8000/health
+```
 
-```powershell
+Expected response:
+
+```json
+{"status": "healthy", "service": "Decypher AI Backend", "version": "0.1.0"}
+```
+
+### 4. Start the frontend
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-打开 `http://localhost:3000`。
+Open:
 
----
+```bash
+http://localhost:3000
+```
 
-*Decypher AI ── 用智能解码科技，以决策重构未来。*
+## Default Data Flow
+
+1. A task is created with keywords and selected sources.
+2. The collector gathers data from the relevant integrations.
+3. The processor normalizes and deduplicates the raw signals.
+4. The analysis service uses LLMs to produce structured opportunity records.
+5. The frontend loads the results and exposes them through the dashboard and chat experience.
+
+## Documentation
+
+The repository includes deeper design and product docs in the `docs/` folder, including:
+
+- product positioning
+- architecture details
+- roadmap and implementation status
+- database overview and schema planning
+- API conventions and integration references
+
+## Notes
+
+This project is intended as a full-stack AI intelligence platform prototype and is structured for iterative product development. It is already functional for local development and can be extended with additional source integrations, better retrieval, and more advanced AI orchestration.

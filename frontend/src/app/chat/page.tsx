@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -12,7 +12,21 @@ import { useChat } from "@/hooks/useChat";
 import { useOpportunity } from "@/hooks/useOpportunities";
 
 export default function ChatPage() {
-  return <ChatExperience />;
+  return (
+    <Suspense fallback={<PageLoadingFallback />}>
+      <ChatExperience />
+    </Suspense>
+  );
+}
+
+function PageLoadingFallback() {
+  return (
+    <AppShell>
+      <div className="flex h-screen items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    </AppShell>
+  );
 }
 
 function ChatExperience() {
