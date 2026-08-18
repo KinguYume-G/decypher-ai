@@ -19,7 +19,7 @@ export function useOpportunities(options?: { taskId?: number; limit?: number; au
         limit: options?.limit ?? 20,
       });
       setOpportunities(res.data.data ?? []);
-    } catch (e) {
+    } catch {
       setError("Unable to load opportunities");
     } finally {
       setLoading(false);

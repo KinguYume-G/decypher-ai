@@ -4,7 +4,6 @@
 一键初始化演示数据：为 5 个模块各创建一个默认任务并立即触发。
 仅在数据库为空时执行（有任务就跳过）。
 """
-import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,9 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.core.scheduler import scheduler
 from app.models.task import Task, TaskStatus
+from app.models.analysis_run import AnalysisRun, RunStatus
 from app.models.user import User
 from app.schemas import APIResponse
-from app.workers.orchestrator import run_analysis_task
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/seed", tags=["seed"])
@@ -96,15 +95,9 @@ async def seed_demo_data(
     await db.commit()
     logger.info(f"Seed: created {len(created_ids)} tasks for user {current_user.id}")
 
-    # 顺序触发（本地 Ollama 无法处理并发推理）
-    async def _run_sequential():
-        for tid in created_ids:
-            try:
-                await run_analysis_task(tid)
-            except Exception as e:
-                logger.error(f"Seed: task {tid} failed: {e}")
-
-    asyncio.create_task(_run_sequential())
+    for task_id in created_ids:
+        db.add(AnalysisRun(task_id=task_id, trigger="manual", status=RunStatus.queued))
+    await db.commit()
 
     return APIResponse(
         success=True,

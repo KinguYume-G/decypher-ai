@@ -16,7 +16,7 @@ export function useTasks(autoLoad = true) {
     try {
       const res = await taskAPI.list();
       setTasks(res.data.data ?? []);
-    } catch (e) {
+    } catch {
       setError("Unable to load tasks");
     } finally {
       setLoading(false);
@@ -47,5 +47,12 @@ export function useTasks(autoLoad = true) {
     toast.success("Task deleted");
   };
 
-  return { tasks, loading, error, fetchTasks, createTask, runTask, deleteTask };
+  const toggleTask = async (task: Task) => {
+    const response = await taskAPI.update(task.id, { is_active: !task.is_active });
+    const updated = response.data.data!;
+    setTasks((items) => items.map((item) => item.id === updated.id ? updated : item));
+    toast.success(updated.is_active ? "Task resumed" : "Task paused");
+  };
+
+  return { tasks, loading, error, fetchTasks, createTask, runTask, deleteTask, toggleTask };
 }

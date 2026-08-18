@@ -1,14 +1,16 @@
 # Tasks routes: CRUD for scheduled data-collection tasks + POST /{id}/run to manually trigger the analysis pipeline.
 # 任务路由：定时采集任务的增删改查，以及 POST /{id}/run 手动触发分析 Pipeline。
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
-from app.core.scheduler import add_task_job, remove_task_job
+from app.core.scheduler import add_task_job, pause_task_job, remove_task_job, resume_task_job
+from app.models.analysis_run import AnalysisRun, RunStatus
+from app.models.item import Item
 from app.models.task import Task, TaskStatus
 from app.models.user import User
-from app.schemas import APIResponse, TaskCreate, TaskOut, TaskUpdate
+from app.schemas import AnalysisRunOut, APIResponse, ItemOut, TaskCreate, TaskOut, TaskUpdate
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -70,6 +72,13 @@ async def update_task(
 
     if payload.interval_seconds is not None:
         add_task_job(task.id, payload.interval_seconds)
+    if payload.is_active is False:
+        task.status = TaskStatus.paused
+        pause_task_job(task.id)
+    elif payload.is_active is True:
+        if task.status == TaskStatus.paused:
+            task.status = TaskStatus.pending
+        resume_task_job(task.id)
 
     await db.commit()
     await db.refresh(task)
@@ -92,15 +101,69 @@ async def delete_task(
 @router.post("/{task_id}/run", response_model=APIResponse[dict])
 async def run_task(
     task_id: int,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from app.services.pipeline_service import run_pipeline
-
     task = await _get_user_task(task_id, current_user.id, db)
-    background_tasks.add_task(run_pipeline, task_id)
-    return APIResponse(success=True, data={"message": f"任务 '{task.name}' 已触发执行，结果稍后可查看"})
+    active = await db.execute(
+        select(AnalysisRun).where(
+            AnalysisRun.task_id == task.id,
+            AnalysisRun.status.in_([
+                RunStatus.queued, RunStatus.collecting, RunStatus.processing, RunStatus.analyzing,
+            ]),
+        )
+    )
+    if active.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="任务已有一次运行正在进行")
+
+    run = AnalysisRun(task_id=task.id, trigger="manual", status=RunStatus.queued)
+    db.add(run)
+    await db.commit()
+    await db.refresh(run)
+    return APIResponse(
+        success=True,
+        data={"message": f"任务 '{task.name}' 已触发执行并加入队列", "run_id": run.id},
+    )
+
+
+@router.get("/{task_id}/runs", response_model=APIResponse[list[AnalysisRunOut]])
+async def list_task_runs(
+    task_id: int,
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await _get_user_task(task_id, current_user.id, db)
+    result = await db.execute(
+        select(AnalysisRun)
+        .where(AnalysisRun.task_id == task_id)
+        .order_by(desc(AnalysisRun.created_at))
+        .limit(min(max(limit, 1), 100))
+    )
+    return APIResponse(
+        success=True,
+        data=[AnalysisRunOut.model_validate(run) for run in result.scalars().all()],
+    )
+
+
+@router.get("/{task_id}/items", response_model=APIResponse[list[ItemOut]])
+async def list_task_items(
+    task_id: int,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await _get_user_task(task_id, current_user.id, db)
+    result = await db.execute(
+        select(Item)
+        .where(Item.task_id == task_id)
+        .order_by(desc(Item.collected_at))
+        .limit(min(max(limit, 1), 100))
+    )
+    return APIResponse(
+        success=True,
+        data=[ItemOut.model_validate(item) for item in result.scalars().all()],
+    )
 
 
 async def _get_user_task(task_id: int, user_id: int, db: AsyncSession) -> Task:

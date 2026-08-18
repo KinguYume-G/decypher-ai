@@ -3,11 +3,15 @@ import type {
   APIResponse,
   ChatMessage,
   ChatResponse,
+  Citation,
+  Conversation,
   Note,
   NoteCreate,
   NoteUpdate,
   Opportunity,
   Task,
+  AnalysisRun,
+  SourceItem,
   TaskCategory,
   TaskCreate,
   TokenOut,
@@ -17,6 +21,27 @@ import type {
 const http = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
 });
+
+export function getAPIErrorMessage(error: unknown, fallback: string): string {
+  const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data
+    ?.detail;
+
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((entry) => {
+        if (typeof entry === "string") return entry;
+        if (entry && typeof entry === "object" && "msg" in entry) {
+          return String((entry as { msg: unknown }).msg);
+        }
+        return null;
+      })
+      .filter((message): message is string => Boolean(message));
+    if (messages.length > 0) return messages.join("；");
+  }
+
+  return fallback;
+}
 
 http.interceptors.request.use((config) => {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -34,6 +59,8 @@ http.interceptors.response.use(
       const isAuthRoute = window.location.pathname.includes("/login");
       if (!isAuthRoute) {
         localStorage.removeItem("token");
+        // The interceptor runs outside React, so Next's router is unavailable here.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.href = "/login";
       }
     }
@@ -59,6 +86,8 @@ export const taskAPI = {
     http.patch<APIResponse<Task>>(`/api/v1/tasks/${id}`, data),
   delete: (id: number) => http.delete<APIResponse<null>>(`/api/v1/tasks/${id}`),
   run: (id: number) => http.post<APIResponse<{ message: string }>>(`/api/v1/tasks/${id}/run`),
+  runs: (id: number) => http.get<APIResponse<AnalysisRun[]>>(`/api/v1/tasks/${id}/runs`),
+  items: (id: number) => http.get<APIResponse<SourceItem[]>>(`/api/v1/tasks/${id}/items`),
 };
 
 export const opportunityAPI = {
@@ -86,6 +115,7 @@ export const notesAPI = {
 };
 
 export const chatAPI = {
+  conversations: () => http.get<APIResponse<Conversation[]>>("/api/v1/chat/conversations"),
   message: (data: {
     message: string;
     opportunity_id?: number;
@@ -103,10 +133,12 @@ export const chatAPI = {
       opportunity_id?: number;
       conversation_history?: ChatMessage[];
       report_mode?: boolean;
+      conversation_id?: number;
     },
     onChunk: (chunk: string) => void,
     onDone: () => void,
     onError?: (err: string) => void,
+    onMeta?: (meta: { conversation_id: number; citations: Citation[] }) => void,
   ): AbortController => {
     const controller = new AbortController();
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -146,6 +178,10 @@ export const chatAPI = {
               const parsed = JSON.parse(raw);
               if (parsed.type === "delta" && parsed.content) onChunk(parsed.content);
               if (parsed.type === "error") onError?.(parsed.content);
+              if (parsed.type === "meta") onMeta?.({
+                conversation_id: parsed.conversation_id,
+                citations: parsed.citations ?? [],
+              });
             } catch { /* skip malformed */ }
           }
         }

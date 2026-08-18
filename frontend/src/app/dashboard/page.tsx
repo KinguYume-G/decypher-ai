@@ -191,7 +191,7 @@ function EmptyState({ search, onClear }: { search: string; onClear: () => void }
       </div>
       {search ? (
         <>
-          <h2 className="text-base font-semibold text-on-surface">No results for "{search}"</h2>
+          <h2 className="text-base font-semibold text-on-surface">No results for &quot;{search}&quot;</h2>
           <p className="text-sm text-on-surface-variant mt-1.5 max-w-sm">
             Try a different keyword or clear the search.
           </p>

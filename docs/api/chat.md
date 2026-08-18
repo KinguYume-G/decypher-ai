@@ -1,65 +1,40 @@
-# Chat API — `/api/v1/chat` 🔒
+# Chat API
 
-> SSE 流式对话接口。全局约定见 [conventions.md](./conventions.md)。
+All routes require `Authorization: Bearer <token>`.
 
----
+## `POST /api/v1/chat/stream`
 
-## POST `/api/v1/chat/stream` — 流式聊天（SSE）
+Creates or continues a conversation and returns Server-Sent Events.
 
-**Request Body**
 ```json
 {
-  "message": "帮我分析 Rust 生态的创业机会",
-  "task_id": null,
-  "conversation_history": [
-    { "role": "user", "content": "你好" },
-    { "role": "assistant", "content": "你好！我是 Decypher AI..." }
-  ]
+  "message": "What should I validate first?",
+  "opportunity_id": 7,
+  "conversation_id": null,
+  "conversation_history": []
 }
 ```
 
-**Response** `Content-Type: text/event-stream`
+The first event contains conversation metadata and citations:
 
+```text
+data: {"type":"meta","conversation_id":12,"citations":[...]}
 ```
-data: {"type": "delta", "content": "根"}
 
-data: {"type": "delta", "content": "据"}
+Model output follows as delta events and ends with `[DONE]`:
 
-data: {"type": "delta", "content": " Rust "}
-
-data: {"type": "done", "content": "完整响应内容..."}
+```text
+data: {"type":"delta","content":"Start"}
 
 data: [DONE]
 ```
 
-**Action 事件**（AI 识别到任务操作意图时额外推送）：
-```
-data: {"type": "action", "data": {"action": "update_task", "params": {"keywords": ["rust", "wasm"]}}}
-```
+If inference fails, the stream emits a generic error event without exposing provider internals. Completed assistant content and citations are persisted.
 
----
+## `POST /api/v1/chat/message`
 
-## POST `/api/v1/chat/message` — 非流式聊天
+Non-streaming equivalent. Returns `content`, `conversation_id`, and citations in the standard API envelope.
 
-适合不需要打字机效果的场景。
+## `GET /api/v1/chat/conversations`
 
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "message": "AI 完整回复内容",
-    "task_updated": null,
-    "action_taken": null
-  }
-}
-```
-
----
-
-## 规划中（Phase 3）
-
-```
-GET  /api/v1/chat/sessions       # 历史会话列表
-GET  /api/v1/chat/sessions/{id}  # 单个会话详情（含完整 messages JSONB）
-```
+Returns up to 50 conversations owned by the authenticated user, newest first, including persisted messages and citations.

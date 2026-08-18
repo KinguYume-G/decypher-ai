@@ -53,12 +53,3 @@
   "data": { "is_favorited": true }
 }
 ```
-
----
-
-## 规划中（Phase 1）
-
-```
-GET   /api/v1/cards/{id}       # 卡片详情（含 detail_analysis 全文）
-POST  /api/v1/cards/{id}/like  # 点赞（独立于收藏，累计计数）
-```

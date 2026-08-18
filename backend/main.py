@@ -4,17 +4,20 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from redis.asyncio import Redis
 
 import app.models  # noqa: F401 — 注册所有 ORM 模型，让 init_db 能建表
 from app.api.v1 import auth, cards, chat, notes, opportunities, seed, tasks
 from app.config import settings
 from app.core.scheduler import scheduler
-from app.database import init_db
+from app.database import SessionLocal, init_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
+    if settings.app_env.lower() in {"development", "dev", "test"}:
+        await init_db()
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
@@ -49,3 +52,24 @@ app.include_router(seed.router, prefix="/api/v1")
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "Decypher AI Backend", "version": "0.1.0"}
+
+
+@app.get("/health/ready")
+async def readiness():
+    checks = {"database": False, "redis": False}
+    try:
+        async with SessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+        checks["database"] = True
+    except Exception:
+        pass
+
+    redis = Redis.from_url(settings.redis_url)
+    try:
+        checks["redis"] = bool(await redis.ping())
+    except Exception:
+        pass
+    finally:
+        await redis.aclose()
+
+    return {"status": "ready" if all(checks.values()) else "not_ready", "checks": checks}

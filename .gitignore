@@ -21,7 +21,9 @@ node_modules/
 .next/
 dist/
 build/
+*.tsbuildinfo
 npm-debug.log*
+.playwright-cli/
 
 # os
 .DS_Store
@@ -30,6 +32,3 @@ Thumbs.db
 # ide
 .idea/
 *.swp
-
-
-.env.example
