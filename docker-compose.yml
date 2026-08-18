@@ -27,6 +27,63 @@ services:
       timeout: 5s
       retries: 5
 
+  api:
+    profiles: ["app"]
+    build: ./backend
+    environment:
+      DECYPHER_APP_ENV: production
+      DECYPHER_DEBUG: "false"
+      DECYPHER_DATABASE_URL: postgresql+asyncpg://decypher:decypher@postgres:5432/decypher_db
+      DECYPHER_REDIS_URL: redis://redis:6379/0
+      DECYPHER_SECRET_KEY: ${DECYPHER_SECRET_KEY:-}
+      DECYPHER_AI_PROVIDER: ${DECYPHER_AI_PROVIDER:-ollama}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    profiles: ["app"]
+    build: ./backend
+    command: ["python", "-m", "app.workers.runner"]
+    environment:
+      DECYPHER_APP_ENV: production
+      DECYPHER_DEBUG: "false"
+      DECYPHER_DATABASE_URL: postgresql+asyncpg://decypher:decypher@postgres:5432/decypher_db
+      DECYPHER_REDIS_URL: redis://redis:6379/0
+      DECYPHER_SECRET_KEY: ${DECYPHER_SECRET_KEY:-}
+      DECYPHER_AI_PROVIDER: ${DECYPHER_AI_PROVIDER:-ollama}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    profiles: ["app"]
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
 volumes:
   postgres_data:
   redis_data:

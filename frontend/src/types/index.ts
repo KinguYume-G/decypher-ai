@@ -44,6 +44,36 @@ export interface TaskCreate {
   category?: TaskCategory;
 }
 
+export interface AnalysisRun {
+  id: number;
+  task_id: number;
+  trigger: "manual" | "scheduled";
+  status: "queued" | "collecting" | "processing" | "analyzing" | "completed" | "failed" | "cancelled";
+  collected_count: number;
+  processed_count: number;
+  opportunity_count: number;
+  ai_provider: string | null;
+  ai_model: string | null;
+  error_code: string | null;
+  error_message: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+}
+
+export interface SourceItem {
+  id: number;
+  task_id: number;
+  run_id: number;
+  source: string;
+  url: string;
+  title: string;
+  content: string;
+  score: number;
+  published_at: string | null;
+  collected_at: string;
+}
+
 export interface Opportunity {
   id: number;
   task_id: number;
@@ -85,9 +115,34 @@ export interface NoteUpdate {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  citations?: Citation[];
+}
+
+export interface Citation {
+  item_id: number;
+  title: string;
+  url: string;
+  source: string;
+  excerpt?: string;
+}
+
+export interface ConversationMessage extends ChatMessage {
+  id: number;
+  created_at: string;
+}
+
+export interface Conversation {
+  id: number;
+  opportunity_id: number | null;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  messages: ConversationMessage[];
 }
 
 export interface ChatResponse {
   role: "assistant";
   content: string;
+  conversation_id: number | null;
+  citations: Citation[];
 }

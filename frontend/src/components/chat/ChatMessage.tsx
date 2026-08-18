@@ -39,6 +39,24 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
             {line}
           </p>
         ))}
+        {!isUser && message.citations && message.citations.length > 0 && (
+          <div className="mt-3 border-t border-outline-variant/30 pt-2">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-outline">Sources</p>
+            <div className="space-y-1">
+              {message.citations.map((citation) => (
+                <a
+                  key={citation.item_id}
+                  href={citation.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-xs text-secondary hover:underline"
+                >
+                  {citation.source} · {citation.title}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

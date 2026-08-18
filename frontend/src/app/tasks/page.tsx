@@ -7,11 +7,11 @@ import AppShell from "@/components/layout/AppShell";
 import { CreateTaskModal } from "@/components/dashboard/CreateTaskModal";
 import { TaskCard } from "@/components/dashboard/TaskCard";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { seedAPI } from "@/lib/api";
+import { getAPIErrorMessage, seedAPI } from "@/lib/api";
 import { useTasks } from "@/hooks/useTasks";
 
 export default function TasksPage() {
-  const { tasks, loading, createTask, runTask, deleteTask } = useTasks();
+  const { tasks, loading, createTask, runTask, deleteTask, toggleTask } = useTasks();
   const [seeding, setSeeding] = useState(false);
 
   const handleQuickSetup = async () => {
@@ -22,8 +22,7 @@ export default function TasksPage() {
       // Reload tasks list after a short delay
       setTimeout(() => window.location.reload(), 1500);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      toast.error(msg ?? "Failed to run quick setup");
+      toast.error(getAPIErrorMessage(err, "Failed to run quick setup"));
     } finally {
       setSeeding(false);
     }
@@ -102,7 +101,13 @@ export default function TasksPage() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               {tasks.map((task) => (
-                <TaskCard key={task.id} task={task} onRun={runTask} onDelete={deleteTask} />
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onRun={runTask}
+                  onDelete={deleteTask}
+                  onToggle={toggleTask}
+                />
               ))}
             </div>
           </>

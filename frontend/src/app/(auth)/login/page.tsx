@@ -3,6 +3,7 @@
 import React from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { getAPIErrorMessage } from "@/lib/api";
 
 type Mode = "login" | "register";
 
@@ -25,11 +26,12 @@ export default function LoginPage() {
         await register(email, username, password);
       }
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        (mode === "login"
+      const msg = getAPIErrorMessage(
+        err,
+        mode === "login"
           ? "登录失败，请检查邮箱和密码。"
-          : "注册失败，请尝试其他邮箱或用户名。");
+          : "注册失败，请尝试其他邮箱或用户名。",
+      );
       toast.error(msg);
     } finally {
       setLoading(false);

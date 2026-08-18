@@ -50,5 +50,20 @@ def resume_task_job(task_id: int) -> None:
 
 
 async def _run_task_placeholder(task_id: int) -> None:
-    from app.workers.orchestrator import run_analysis_task  # deferred to avoid circular import
-    await run_analysis_task(task_id)
+    from sqlalchemy import select
+
+    from app.database import SessionLocal
+    from app.models.analysis_run import AnalysisRun, RunStatus
+
+    async with SessionLocal() as db:
+        active = await db.execute(
+            select(AnalysisRun.id).where(
+                AnalysisRun.task_id == task_id,
+                AnalysisRun.status.in_([
+                    RunStatus.queued, RunStatus.collecting, RunStatus.processing, RunStatus.analyzing,
+                ]),
+            )
+        )
+        if active.scalar_one_or_none() is None:
+            db.add(AnalysisRun(task_id=task_id, trigger="scheduled", status=RunStatus.queued))
+            await db.commit()

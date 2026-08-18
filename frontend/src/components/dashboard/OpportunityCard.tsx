@@ -4,8 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Bookmark, BookmarkCheck, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
-import { Badge } from "@/components/ui/Badge";
-import { compactScore, formatDate } from "@/lib/utils";
 import { cardsAPI, notesAPI } from "@/lib/api";
 import type { Opportunity, TaskCategory } from "@/types";
 
@@ -88,7 +86,7 @@ export function OpportunityCard({
           className={`absolute inset-0 rounded-2xl p-5 flex flex-col bg-white border transition-all ${
             selected ? "border-secondary/60 ring-2 ring-secondary/20 shadow-md shadow-secondary/10" : "border-outline-variant/40 hover:border-outline-variant/70"
           }`}
-          style={{ backfaceVisibility: "hidden" }}
+          style={{ backfaceVisibility: "hidden", pointerEvents: flipped ? "none" : "auto" }}
         >
           {/* Row 1: number + score */}
           <div className="flex items-start justify-between mb-3">
@@ -156,7 +154,11 @@ export function OpportunityCard({
         {/* ── Back face ────────────────────────────────────────── */}
         <div
           className="absolute inset-0 rounded-2xl p-5 flex flex-col bg-white border border-outline-variant/40 overflow-y-auto custom-scrollbar"
-          style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+          style={{
+            backfaceVisibility: "hidden",
+            transform: "rotateY(180deg)",
+            pointerEvents: flipped ? "auto" : "none",
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Back header */}

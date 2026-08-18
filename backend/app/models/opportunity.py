@@ -46,7 +46,6 @@ class Opportunity(Base):
     # favorites 关联由 UserFavorite 的 FK cascade 管理；不在此定义关系以避免懒加载
 
     __table_args__ = (
-        Index("idx_opportunities_category", "category"),
         Index("idx_opportunities_score_total", "score_total"),
         Index("idx_opportunities_created_at", "created_at"),
     )

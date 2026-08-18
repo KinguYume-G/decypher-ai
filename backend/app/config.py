@@ -1,6 +1,6 @@
 # Pydantic-settings Settings class: maps all DECYPHER_* env vars into typed fields used across the entire app.
 # Pydantic-settings 配置类：将所有 DECYPHER_* 环境变量映射为类型安全的字段，全项目通过 settings 引用。
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("DECYPHER_OLLAMA_BASE_URL", "OLLAMA_BASE_URL", "ollama_base_url"),
     )
     ollama_model: str = Field(
-        "llama3.2",
+        "qwen3.5:9b",
         validation_alias=AliasChoices("DECYPHER_OLLAMA_MODEL", "OLLAMA_MODEL", "ollama_model"),
     )
 
@@ -115,6 +115,28 @@ class Settings(BaseSettings):
         60,
         validation_alias=AliasChoices("DECYPHER_RATE_LIMIT_PER_MINUTE", "RATE_LIMIT_PER_MINUTE", "rate_limit_per_minute"),
     )
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def normalize_debug(cls, value):
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"release", "production", "prod"}:
+                return False
+            if normalized in {"development", "dev"}:
+                return True
+        return value
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self):
+        if self.app_env.lower() in {"production", "prod"}:
+            if len(self.secret_key) < 32 or self.secret_key == "dev-secret-key":
+                raise ValueError("DECYPHER_SECRET_KEY must be at least 32 characters in production")
+            if self.ai_provider == "openai" and not self.openai_api_key:
+                raise ValueError("OPENAI_API_KEY is required when DECYPHER_AI_PROVIDER=openai")
+            if self.ai_provider == "deepseek" and not self.deepseek_api_key:
+                raise ValueError("DEEPSEEK_API_KEY is required when DECYPHER_AI_PROVIDER=deepseek")
+        return self
 
     @property
     def allowed_origins_list(self) -> list[str]:

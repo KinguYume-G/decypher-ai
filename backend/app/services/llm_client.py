@@ -30,18 +30,18 @@ async def _ollama_completion(
     max_tokens: int,
     temperature: float,
 ) -> str:
-    url = f"{settings.ollama_base_url.rstrip('/')}/chat/completions"
+    url = f"{_ollama_native_base()}/api/chat"
     payload = {
         "model": settings.active_ai_model,
         "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": temperature,
         "stream": False,
+        "think": False,
+        "options": {"num_predict": max_tokens, "temperature": temperature},
     }
     async with httpx.AsyncClient(timeout=300) as client:
         res = await client.post(url, json=payload)
         res.raise_for_status()
-    return _extract_content(res.json())
+    return str((res.json().get("message") or {}).get("content") or "")
 
 
 async def _openai_completion(
@@ -84,13 +84,13 @@ async def _ollama_stream(
     max_tokens: int,
     temperature: float,
 ) -> AsyncGenerator[str, None]:
-    url = f"{settings.ollama_base_url.rstrip('/')}/chat/completions"
+    url = f"{_ollama_native_base()}/api/chat"
     payload = {
         "model": settings.active_ai_model,
         "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": temperature,
         "stream": True,
+        "think": False,
+        "options": {"num_predict": max_tokens, "temperature": temperature},
     }
     import json
     async with httpx.AsyncClient(timeout=300) as client:
@@ -98,17 +98,11 @@ async def _ollama_stream(
             res.raise_for_status()
             async for line in res.aiter_lines():
                 line = line.strip()
-                if not line or line == "data: [DONE]":
+                if not line:
                     continue
-                if line.startswith("data: "):
-                    line = line[6:]
                 try:
                     data = json.loads(line)
-                    content = (
-                        data.get("choices", [{}])[0]
-                        .get("delta", {})
-                        .get("content") or ""
-                    )
+                    content = (data.get("message") or {}).get("content") or ""
                     if content:
                         yield content
                 except (json.JSONDecodeError, IndexError):
@@ -144,3 +138,8 @@ def _extract_content(data: dict[str, Any]) -> str:
         return ""
     message = choices[0].get("message") or {}
     return str(message.get("content") or "")
+
+
+def _ollama_native_base() -> str:
+    base = settings.ollama_base_url.rstrip("/")
+    return base[:-3] if base.endswith("/v1") else base

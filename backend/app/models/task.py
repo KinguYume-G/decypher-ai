@@ -42,3 +42,5 @@ class Task(Base):
 
     user = relationship("User", back_populates="tasks")
     opportunities = relationship("Opportunity", back_populates="task", cascade="all, delete-orphan")
+    items = relationship("Item", back_populates="task", cascade="all, delete-orphan")
+    runs = relationship("AnalysisRun", back_populates="task", cascade="all, delete-orphan")

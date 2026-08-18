@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Generic, Literal, TypeVar
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 T = TypeVar("T")
 
@@ -152,6 +152,40 @@ class TaskOut(BaseModel):
     created_at: datetime
 
 
+class AnalysisRunOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    task_id: int
+    trigger: str
+    status: str
+    collected_count: int
+    processed_count: int
+    opportunity_count: int
+    ai_provider: str | None
+    ai_model: str | None
+    error_code: str | None
+    error_message: str | None
+    started_at: datetime | None
+    finished_at: datetime | None
+    created_at: datetime
+
+
+class ItemOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    task_id: int
+    run_id: int
+    source: str
+    url: str
+    title: str
+    content: str
+    score: int
+    published_at: datetime | None
+    collected_at: datetime
+
+
 # ── Opportunity Schemas ───────────────────────────────────
 
 
@@ -188,8 +222,9 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     opportunity_id: int | None = None
-    conversation_history: list[ChatMessage] = []
+    conversation_history: list[ChatMessage] = Field(default_factory=list)
     report_mode: bool = False  # True → 生成结构化报告
+    conversation_id: int | None = None
 
     @field_validator("message")
     @classmethod
@@ -202,6 +237,29 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     role: Literal["assistant"] = "assistant"
     content: str
+    conversation_id: int | None = None
+    citations: list[dict] = Field(default_factory=list)
+
+
+class ConversationMessageOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    role: str
+    content: str
+    citations: list
+    created_at: datetime
+
+
+class ConversationOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    opportunity_id: int | None
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    messages: list[ConversationMessageOut] = Field(default_factory=list)
 
 
 # ── Note Schemas ──────────────────────────────────────────
